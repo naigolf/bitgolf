@@ -15,53 +15,38 @@ class BitkubAPI {
       .update(payload)
       .digest('hex');
   }
-/*
+
   async getTicker(symbol) {
     try {
       const resp = await axios.get(`${API_BASE}/ticker`);
-      //console.log('Bitkub Ticker Response:', resp.data);
-      if (!resp.data[symbol]) {
+      const data = resp.data;
+
+      let tickerData = null;
+
+      if (Array.isArray(data)) {
+        // กรองหา symbol ที่ต้องการจาก array
+        tickerData = data.find(item => item.symbol === symbol);
+      } else if (typeof data === 'object' && data !== null) {
+        // กรณี data เป็น object ที่ key เป็น symbol เช่น { "DOGE_THB": {...}, ... }
+        if (data[symbol]) {
+          tickerData = data[symbol];
+        } else if (data.symbol === symbol) {
+          // กรณี data เป็น object เดี่ยวที่มี key 'symbol'
+          tickerData = data;
+        }
+      }
+
+      if (!tickerData) {
         throw new Error(`Ticker data for symbol ${symbol} not found`);
       }
-    // แสดงเฉพาะข้อมูลเหรียญที่ต้องการ
-    console.log(`Bitkub Ticker Response for ${symbol}:`, resp.data[symbol]);
-      return resp.data[symbol];
+
+      console.log(`Bitkub Ticker Response for ${symbol}:`, tickerData);
+      return tickerData;
     } catch (e) {
       throw new Error('Failed to get ticker: ' + e.message);
     }
   }
-*/
-async getTicker(symbol) {
-  try {
-    const resp = await axios.get(`${API_BASE}/ticker`);
-    // resp.data อาจเป็น array หรือ object ต้องเช็คก่อน
-    let tickerData;
 
-    if (Array.isArray(resp.data)) {
-      // กรองข้อมูลเฉพาะ symbol ที่เราต้องการ
-      tickerData = resp.data.find(item => item.symbol === symbol);
-    } else if (typeof resp.data === 'object' && resp.data !== null) {
-      // กรณีข้อมูลเป็น object ที่ key เป็น symbol
-      tickerData = resp.data[symbol];
-      // หรือถ้า resp.data มี key symbol ข้างในเหมือนตัวอย่าง ให้ลอง:
-      if (!tickerData && resp.data.symbol === symbol) {
-        tickerData = resp.data;
-      }
-    }
-
-    if (!tickerData) {
-      throw new Error(`Ticker data for symbol ${symbol} not found`);
-    }
-
-    return tickerData;
-  } catch (e) {
-    throw new Error('Failed to get ticker: ' + e.message);
-  }
-}
-
-
-
-  
   async getWallet() {
     const path = '/wallet';
     const ts = Date.now();
