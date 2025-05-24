@@ -58,7 +58,7 @@ class BitkubAPI {
     const signature = this.signPayload(stringToSign);
 
     try {
-      const resp = await axios.post(
+      const resp = await axios.get(
         `${API_BASE}${path}`,
         body,
         {
