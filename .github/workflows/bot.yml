@@ -1,0 +1,33 @@
+name: Bitkub Scalping Bot
+
+on:
+  workflow_dispatch: # สำหรับกดรันด้วยมือ
+  schedule:
+    - cron: '*/1 * * * *' # รันทุก 1 นาที
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run bot
+        run: node index.js
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          API_SECRET: ${{ secrets.API_SECRET }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID }}
+          SYMBOL: ${{ vars.SYMBOL }}
+          BUY_PERCENT: ${{ vars.BUY_PERCENT }}
+          SELL_PERCENT: ${{ vars.SELL_PERCENT }}
+          TRADE_AMOUNT: ${{ vars.TRADE_AMOUNT }}
