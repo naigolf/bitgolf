@@ -16,15 +16,20 @@ class BitkubAPI {
       .digest('hex');
   }
 
-  async getTicker(symbol) {
-    try {
-      const resp = await axios.get(`${API_BASE}/ticker`);
-      console.log('Bitkub Ticker Response:', res.data);
-      return resp.data[symbol];
-    } catch (e) {
-      throw new Error('Failed to get ticker: ' + e.message);
+async getTicker(symbol) {
+  try {
+    const resp = await axios.get(`${API_BASE}/ticker`);
+    console.log('Bitkub Ticker Response:', resp.data);
+    if (!resp.data[symbol]) {
+      throw new Error(`Ticker data for symbol ${symbol} not found`);
     }
+    return resp.data[symbol];
+  } catch (e) {
+    throw new Error('Failed to get ticker: ' + e.message);
   }
+}
+
+
 
   async getWallet() {
     const path = '/wallet';
