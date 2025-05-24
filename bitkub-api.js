@@ -19,6 +19,7 @@ class BitkubAPI {
   async getTicker(symbol) {
     try {
       const resp = await axios.get(`${API_BASE}/ticker`);
+      console.log('Bitkub Ticker Response:', res.data);
       return resp.data[symbol];
     } catch (e) {
       throw new Error('Failed to get ticker: ' + e.message);
