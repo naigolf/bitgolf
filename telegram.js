@@ -1,12 +1,15 @@
 const axios = require('axios');
-require('dotenv').config();
 
-function notify(msg) {
-  const url = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`;
-  return axios.post(url, {
-    chat_id: process.env.TELEGRAM_CHAT_ID,
-    text: msg
-  });
+async function sendTelegram(botToken, chatId, message) {
+  try {
+    await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: chatId,
+      text: message,
+      parse_mode: 'Markdown',
+    });
+  } catch (e) {
+    console.error('Telegram send error:', e.message);
+  }
 }
 
-module.exports = { notify };
+module.exports = sendTelegram;
