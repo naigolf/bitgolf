@@ -1,4 +1,3 @@
-require('dotenv').config();
 const WebSocket = require('ws');
 const { onPriceUpdate } = require('./tradeLogic');
 
