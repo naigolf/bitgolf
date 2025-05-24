@@ -49,37 +49,41 @@ class BitkubAPI {
 
   
   async getWallet() {
-    const path = '/api/market/wallet'; // ✅ แก้ตรงนี้
-    const method = 'POST';
-    const timestamp = Date.now().toString();
-    const body = '';
+  const path = '/api/market/wallet';
+  const method = 'POST';
+  const timestamp = Date.now().toString();
 
-    const stringToSign = timestamp + method + path + body;
-    const signature = this.signPayload(stringToSign);
+  const bodyObj = { ts: Number(timestamp) };
+  const body = JSON.stringify(bodyObj);
 
-    try {
-      const resp = await axios.get(
-        `${API_BASE}${path}`,
-        body,
-        {
-          headers: {
-            'X-BTK-TIMESTAMP': timestamp,
-            'X-BTK-APIKEY': this.apiKey,
-            'X-BTK-SIGN': signature,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      return resp.data;
-    } catch (e) {
-      if (e.response) {
-        console.error('Wallet API response error:', e.response.status, e.response.data);
-      } else {
-        console.error('Wallet API error:', e.message);
+  const stringToSign = timestamp + method + path + body;
+  const signature = this.signPayload(stringToSign);
+
+  try {
+    const resp = await axios.post(
+      `${API_BASE}${path}`,
+      body,
+      {
+        headers: {
+          'X-BTK-TIMESTAMP': timestamp,
+          'X-BTK-APIKEY': this.apiKey,
+          'X-BTK-SIGN': signature,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
       }
-      throw new Error('Failed to get wallet: ' + e.message);
+    );
+    return resp.data;
+  } catch (e) {
+    if (e.response) {
+      console.error('Wallet API response error:', e.response.status, e.response.data);
+    } else {
+      console.error('Wallet API error:', e.message);
     }
+    throw new Error('Failed to get wallet: ' + e.message);
   }
+}
+
 
   async placeOrder(side, symbol, price, amount) {
     if (side === 'ask') {
