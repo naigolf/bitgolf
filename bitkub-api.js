@@ -49,7 +49,7 @@ class BitkubAPI {
 
   
   async getWallet() {
-  const path = '/api/market/balances';  // เปลี่ยนตรงนี้
+  const path = '/api/v3/market/wallet'; // ใช้ secure endpoint v3
   const method = 'POST';
   const timestamp = Date.now().toString();
 
@@ -69,7 +69,6 @@ class BitkubAPI {
           'X-BTK-APIKEY': this.apiKey,
           'X-BTK-SIGN': signature,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
       }
     );
@@ -83,6 +82,7 @@ class BitkubAPI {
     throw new Error('Failed to get wallet: ' + e.message);
   }
 }
+
 
 
 
