@@ -7,7 +7,11 @@ const API_KEY = process.env.API_KEY;
 const API_SECRET = process.env.API_SECRET;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const SYMBOL = process.env.SYMBOL || 'DOGE_THB';
+//const SYMBOL = process.env.SYMBOL || 'DOGE_THB';
+
+const SYMBOL = (process.env.SYMBOL && process.env.SYMBOL !== '***') ? process.env.SYMBOL : 'DOGE_THB';
+console.log('Trading symbol:', SYMBOL);
+
 const BUY_PERCENT = parseFloat(process.env.BUY_PERCENT || '2.0');   // ซื้อเมื่อราคาลดลง 2%
 const SELL_PERCENT = parseFloat(process.env.SELL_PERCENT || '2.5'); // ขายเมื่อราคาขึ้น 2.5%
 const TRADE_AMOUNT = parseFloat(process.env.TRADE_AMOUNT || '300'); // เทรดไม้ละ 300 บาท
