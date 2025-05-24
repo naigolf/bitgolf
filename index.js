@@ -10,7 +10,7 @@ const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 //const SYMBOL = process.env.SYMBOL || 'DOGE_THB';
 
 const SYMBOL = 'DOGE_THB';
-console.log('Trading symbol:', SYMBOL);
+console.log('Trading symbol::::::', SYMBOL);
 
 const BUY_PERCENT = parseFloat(process.env.BUY_PERCENT || '2.0');   // ซื้อเมื่อราคาลดลง 2%
 const SELL_PERCENT = parseFloat(process.env.SELL_PERCENT || '2.5'); // ขายเมื่อราคาขึ้น 2.5%
