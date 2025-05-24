@@ -19,10 +19,12 @@ class BitkubAPI {
   async getTicker(symbol) {
     try {
       const resp = await axios.get(`${API_BASE}/ticker`);
-      console.log('Bitkub Ticker Response:', resp.data);
+      //console.log('Bitkub Ticker Response:', resp.data);
       if (!resp.data[symbol]) {
         throw new Error(`Ticker data for symbol ${symbol} not found`);
       }
+    // แสดงเฉพาะข้อมูลเหรียญที่ต้องการ
+    console.log(`Bitkub Ticker Response for ${symbol}:`, resp.data[symbol]);
       return resp.data[symbol];
     } catch (e) {
       throw new Error('Failed to get ticker: ' + e.message);
