@@ -1,91 +1,88 @@
 require('dotenv').config();
-const BitkubAPI = require('./bitkub');
-const axios = require('axios');
+const BitkubAPI = require('./bitkub-api');
+const sendTelegram = require('./telegram');
+const { saveTrade, getTodayProfit } = require('./summary');
 
-const {
-  BITKUB_API_KEY,
-  BITKUB_API_SECRET,
-  BITKUB_SYMBOL,
-  TRADE_AMOUNT,
-  BUY_PERCENT,
-  SELL_PERCENT,
-  TELEGRAM_BOT_TOKEN,
-  TELEGRAM_CHAT_ID
-} = process.env;
+const API_KEY = process.env.API_KEY;
+const API_SECRET = process.env.API_SECRET;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const SYMBOL = process.env.SYMBOL || 'DOGE_THB';
+const BUY_PERCENT = parseFloat(process.env.BUY_PERCENT || '2.0');   // ซื้อเมื่อราคาลดลง 2%
+const SELL_PERCENT = parseFloat(process.env.SELL_PERCENT || '2.5'); // ขายเมื่อราคาขึ้น 2.5%
+const TRADE_AMOUNT = parseFloat(process.env.TRADE_AMOUNT || '300'); // เทรดไม้ละ 300 บาท
 
-const api = new BitkubAPI(BITKUB_API_KEY, BITKUB_API_SECRET);
-let lastBuyPrice = null;
-let errorCount = 0;
-
-async function sendTelegram(message) {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-  await axios.post(url, {
-    chat_id: TELEGRAM_CHAT_ID,
-    text: message
-  });
+if (!API_KEY || !API_SECRET || !TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+  console.error('Missing required environment variables.');
+  process.exit(1);
 }
 
-async function canBuy(thbNeeded) {
+const api = new BitkubAPI(API_KEY, API_SECRET);
+
+async function main() {
   try {
-    const wallet = await api.wallet();
-    return wallet.THB >= thbNeeded;
-  } catch (err) {
-    console.error("Error fetching wallet:", err.message);
-    return false;
-  }
-}
+    const ticker = await api.getTicker(SYMBOL);
+    const price = parseFloat(ticker.last);
+    const wallet = await api.getWallet();
 
-async function canSell(coin, qtyNeeded) {
-  try {
-    const wallet = await api.wallet();
-    return wallet[coin] >= qtyNeeded;
-  } catch (err) {
-    console.error("Error fetching wallet:", err.message);
-    return false;
-  }
-}
+    // แปลงเงิน THB ใน wallet
+    const thbBalance = wallet.find(w => w.currency === 'THB')?.balance || 0;
 
-async function tradeBot() {
-  try {
-    const ticker = await api.ticker(BITKUB_SYMBOL);
-    const lastPrice = ticker.last;
-    const coin = BITKUB_SYMBOL.split("_")[0];
-    const buyPrice = lastPrice * (1 + parseFloat(BUY_PERCENT) / 100);
-    const sellPrice = lastBuyPrice ? lastBuyPrice * (1 + parseFloat(SELL_PERCENT) / 100) : null;
+    // คำนวณราคาซื้อและขาย
+    const buyPrice = price * (1 - BUY_PERCENT / 100);
+    const sellPrice = price * (1 + SELL_PERCENT / 100);
 
-    if (!lastBuyPrice) {
-      if (!(await canBuy(TRADE_AMOUNT))) {
-        errorCount++;
-        await sendTelegram("❌ ไม่สามารถซื้อได้: เงินไม่พอในพอร์ต");
-        if (errorCount >= 5) {
-          await sendTelegram("⛔ หยุดบอทชั่วคราว 10 นาที (เงินไม่พอ)");
-          setTimeout(tradeBot, 600000); // wait 10 mins
-          return;
-        }
-        return setTimeout(tradeBot, 30000);
-      }
+    console.log(`Current price: ${price} THB`);
+    console.log(`Buy price target: ${buyPrice.toFixed(4)} THB`);
+    console.log(`Sell price target: ${sellPrice.toFixed(4)} THB`);
+    console.log(`THB balance: ${thbBalance.toFixed(2)}`);
 
-      await api.placeBuyOrder(BITKUB_SYMBOL, TRADE_AMOUNT / buyPrice, buyPrice);
-      lastBuyPrice = buyPrice;
-      errorCount = 0;
-      await sendTelegram(`✅ ซื้อที่ ${buyPrice.toFixed(3)} บาท`);
-    } else if (sellPrice && lastPrice >= sellPrice) {
-      const coinQty = TRADE_AMOUNT / lastBuyPrice;
-      if (!(await canSell(coin, coinQty))) {
-        await sendTelegram("❌ ไม่สามารถขายได้: เหรียญไม่พอในพอร์ต");
-        return setTimeout(tradeBot, 30000);
-      }
-
-      await api.placeSellOrder(BITKUB_SYMBOL, coinQty, sellPrice);
-      await sendTelegram(`💰 ขายที่ ${sellPrice.toFixed(3)} บาท`);
-      lastBuyPrice = null;
+    if (thbBalance < TRADE_AMOUNT) {
+      await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `ยอดเงินไม่พอสำหรับซื้อ: ${thbBalance.toFixed(2)} THB`);
+      return;
     }
-  } catch (err) {
-    console.error("Trade bot error:", err.message);
-    await sendTelegram(`⚠️ ERROR: ${err.message}`);
-  }
 
-  setTimeout(tradeBot, 30000);
+    // ส่งคำสั่งซื้อ
+    const buyOrder = await api.placeOrder('bid', SYMBOL, buyPrice.toFixed(4), (TRADE_AMOUNT / buyPrice).toFixed(6));
+
+    if (buyOrder.error) {
+      await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `ซื้อไม่สำเร็จ: ${buyOrder.error.message || JSON.stringify(buyOrder)}`);
+      return;
+    }
+
+    await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `ซื้อสำเร็จ: ${TRADE_AMOUNT} THB ที่ราคา ${buyPrice.toFixed(4)} THB`);
+
+    // ขายทันที (Auto-Sell)
+    const sellAmount = (TRADE_AMOUNT / buyPrice).toFixed(6);
+    const sellOrder = await api.placeOrder('ask', SYMBOL, sellPrice.toFixed(4), sellAmount);
+
+    if (sellOrder.error) {
+      await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `ขายไม่สำเร็จ: ${sellOrder.error.message || JSON.stringify(sellOrder)}`);
+      return;
+    }
+
+    // บันทึกกำไรคร่าวๆ
+    const profit = TRADE_AMOUNT * (SELL_PERCENT - BUY_PERCENT) / 100;
+
+    saveTrade({
+      date: new Date().toISOString(),
+      symbol: SYMBOL,
+      buyPrice: buyPrice.toFixed(4),
+      sellPrice: sellPrice.toFixed(4),
+      amount: TRADE_AMOUNT,
+      profit,
+    });
+
+    await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `ขายสำเร็จ กำไรโดยประมาณ: ${profit.toFixed(2)} THB`);
+
+    // สรุปกำไรรวมวันนี้
+    const totalProfit = getTodayProfit();
+    await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `กำไรรวมวันนี้: ${totalProfit.toFixed(2)} THB`);
+
+  } catch (e) {
+    console.error('Error:', e.message);
+    await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `Error: ${e.message}`);
+  }
 }
 
-tradeBot();
+main();
