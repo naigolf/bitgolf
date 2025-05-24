@@ -25,8 +25,8 @@ async function main() {
     console.log('🚀 Start main function');
     console.log('📈 Trading symbol:', SYMBOL);
 
-    //const ticker = await api.getTicker(SYMBOL);
-    const ticker = await api.getTicker();
+    const ticker = await api.getTicker(SYMBOL);
+    //const ticker = await api.getTicker();
     console.log('Available symbols:', Object.keys(ticker));
     if (!ticker || typeof ticker.last === 'undefined') throw new Error(`Invalid ticker data for ${SYMBOL}`);
 
