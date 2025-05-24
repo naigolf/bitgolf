@@ -21,6 +21,7 @@ const api = new BitkubAPI(API_KEY, API_SECRET);
 
 async function main() {
   try {
+    console.log('Trading symbol:', SYMBOL);
     const ticker = await api.getTicker(SYMBOL);
 
     // เพิ่มการตรวจสอบ ticker และ last price
