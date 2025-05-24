@@ -3,6 +3,7 @@ const path = require('path');
 
 const filePath = path.join(__dirname, 'trades.json');
 
+// โหลดข้อมูลเทรด
 function loadTrades() {
   if (!fs.existsSync(filePath)) return [];
   try {
@@ -13,12 +14,14 @@ function loadTrades() {
   }
 }
 
+// บันทึกเทรดใหม่
 function saveTrade(trade) {
   const trades = loadTrades();
   trades.push(trade);
   fs.writeFileSync(filePath, JSON.stringify(trades, null, 2));
 }
 
+// คำนวณกำไรรวมของวันนี้
 function getTodayProfit() {
   const trades = loadTrades();
   const today = new Date().toISOString().slice(0, 10);
