@@ -1,7 +1,7 @@
 const axios = require('axios');
 const crypto = require('crypto');
 
-const API_BASE = 'https://api.bitkub.com/api/market';
+const API_BASE = 'https://api.bitkub.com/api/v3/market';
 
 class BitkubAPI {
   constructor(apiKey, apiSecret) {
@@ -16,31 +16,32 @@ class BitkubAPI {
       .digest('hex');
   }
 
-async getTicker(symbol) {
-  try {
-    const resp = await axios.get(`${API_BASE}/ticker`);
-    console.log('Bitkub Ticker Response:', resp.data);
-    if (!resp.data[symbol]) {
-      throw new Error(`Ticker data for symbol ${symbol} not found`);
+  async getTicker(symbol) {
+    try {
+      const resp = await axios.get(`${API_BASE}/ticker`);
+      console.log('Bitkub Ticker Response:', resp.data);
+      if (!resp.data[symbol]) {
+        throw new Error(`Ticker data for symbol ${symbol} not found`);
+      }
+      return resp.data[symbol];
+    } catch (e) {
+      throw new Error('Failed to get ticker: ' + e.message);
     }
-    return resp.data[symbol];
-  } catch (e) {
-    throw new Error('Failed to get ticker: ' + e.message);
   }
-}
-
-
 
   async getWallet() {
     const path = '/wallet';
-    const method = 'GET';
     const ts = Date.now();
     const payload = `access_key=${this.apiKey}&created=${ts}`;
-
     const signature = this.signPayload(payload);
 
     try {
-      const resp = await axios.get(`${API_BASE}${path}?${payload}&signature=${signature}`, {
+      const resp = await axios.post(`${API_BASE}${path}`, null, {
+        params: {
+          access_key: this.apiKey,
+          created: ts,
+          signature: signature,
+        },
         headers: { 'X-API-KEY': this.apiKey },
       });
       return resp.data;
@@ -50,10 +51,7 @@ async getTicker(symbol) {
   }
 
   async placeOrder(side, symbol, price, amount) {
-    // side: 'bid' = buy, 'ask' = sell
-    const path = '/place-bid';
     if (side === 'ask') {
-      // sell uses place-ask
       return this.placeSellOrder(symbol, price, amount);
     } else {
       return this.placeBuyOrder(symbol, price, amount);
@@ -63,8 +61,8 @@ async getTicker(symbol) {
   async placeBuyOrder(symbol, price, amount) {
     const path = '/place-bid';
     const ts = Date.now();
-    const body = `access_key=${this.apiKey}&amount=${amount}&price=${price}&symbol=${symbol}&created=${ts}`;
-    const signature = this.signPayload(body);
+    const payload = `access_key=${this.apiKey}&amount=${amount}&price=${price}&symbol=${symbol}&created=${ts}`;
+    const signature = this.signPayload(payload);
 
     try {
       const resp = await axios.post(`${API_BASE}${path}`, null, {
@@ -87,8 +85,8 @@ async getTicker(symbol) {
   async placeSellOrder(symbol, price, amount) {
     const path = '/place-ask';
     const ts = Date.now();
-    const body = `access_key=${this.apiKey}&amount=${amount}&price=${price}&symbol=${symbol}&created=${ts}`;
-    const signature = this.signPayload(body);
+    const payload = `access_key=${this.apiKey}&amount=${amount}&price=${price}&symbol=${symbol}&created=${ts}`;
+    const signature = this.signPayload(payload);
 
     try {
       const resp = await axios.post(`${API_BASE}${path}`, null, {
