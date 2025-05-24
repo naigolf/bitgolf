@@ -30,10 +30,10 @@ class BitkubAPI {
   }
 
   async getWallet() {
-    const path = '/api/v3/market/wallet';
+    const path = '/api/market/wallet'; // ✅ แก้ตรงนี้
     const method = 'POST';
     const timestamp = Date.now().toString();
-    const body = ''; // no body for wallet
+    const body = '';
 
     const stringToSign = timestamp + method + path + body;
     const signature = this.signPayload(stringToSign);
@@ -79,9 +79,9 @@ class BitkubAPI {
 
     const bodyObj = {
       sym: symbol.toLowerCase(),
-      amt: amount,
-      rat: price,
-      typ: 'limit',  // หรือ 'market' ตามต้องการ
+      amt: String(amount),
+      rat: String(price),
+      typ: 'limit',
     };
     const body = JSON.stringify(bodyObj);
 
@@ -119,9 +119,9 @@ class BitkubAPI {
 
     const bodyObj = {
       sym: symbol.toLowerCase(),
-      amt: amount,
-      rat: price,
-      typ: 'limit',  // หรือ 'market' ตามต้องการ
+      amt: String(amount),
+      rat: String(price),
+      typ: 'limit',
     };
     const body = JSON.stringify(bodyObj);
 
