@@ -15,7 +15,7 @@ class BitkubAPI {
       .update(payload)
       .digest('hex');
   }
-
+/*
   async getTicker(symbol) {
     try {
       const resp = await axios.get(`${API_BASE}/ticker`);
@@ -30,7 +30,38 @@ class BitkubAPI {
       throw new Error('Failed to get ticker: ' + e.message);
     }
   }
+*/
+async getTicker(symbol) {
+  try {
+    const resp = await axios.get(`${API_BASE}/ticker`);
+    // resp.data อาจเป็น array หรือ object ต้องเช็คก่อน
+    let tickerData;
 
+    if (Array.isArray(resp.data)) {
+      // กรองข้อมูลเฉพาะ symbol ที่เราต้องการ
+      tickerData = resp.data.find(item => item.symbol === symbol);
+    } else if (typeof resp.data === 'object' && resp.data !== null) {
+      // กรณีข้อมูลเป็น object ที่ key เป็น symbol
+      tickerData = resp.data[symbol];
+      // หรือถ้า resp.data มี key symbol ข้างในเหมือนตัวอย่าง ให้ลอง:
+      if (!tickerData && resp.data.symbol === symbol) {
+        tickerData = resp.data;
+      }
+    }
+
+    if (!tickerData) {
+      throw new Error(`Ticker data for symbol ${symbol} not found`);
+    }
+
+    return tickerData;
+  } catch (e) {
+    throw new Error('Failed to get ticker: ' + e.message);
+  }
+}
+
+
+
+  
   async getWallet() {
     const path = '/wallet';
     const ts = Date.now();
