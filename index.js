@@ -22,8 +22,26 @@ const api = new BitkubAPI(API_KEY, API_SECRET);
 async function main() {
   try {
     const ticker = await api.getTicker(SYMBOL);
+
+    // เพิ่มการตรวจสอบ ticker และ last price
+    if (!ticker) {
+      throw new Error(`No ticker data received for symbol ${SYMBOL}`);
+    }
+    if (typeof ticker.last === 'undefined') {
+      console.error("Ticker data:", ticker);
+      throw new Error(`Ticker data missing 'last' property for symbol ${SYMBOL}`);
+    }
+
     const price = parseFloat(ticker.last);
+    if (isNaN(price)) {
+      throw new Error(`Invalid last price received: ${ticker.last}`);
+    }
+
     const wallet = await api.getWallet();
+    if (!Array.isArray(wallet)) {
+      console.error("Wallet data:", wallet);
+      throw new Error("Wallet data is not an array or invalid");
+    }
 
     // แปลงเงิน THB ใน wallet
     const thbBalance = wallet.find(w => w.currency === 'THB')?.balance || 0;
