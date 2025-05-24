@@ -1,7 +1,10 @@
 async function main() {
   try {
+    console.log('Start main function');
+    
     console.log('Trading symbol:', SYMBOL);
     const ticker = await api.getTicker(SYMBOL);
+    console.log('Got ticker:', ticker);
 
     if (!ticker) throw new Error(`No ticker data for ${SYMBOL}`);
     if (typeof ticker.last === 'undefined') throw new Error(`Ticker missing last price`);
@@ -65,3 +68,6 @@ async function main() {
     await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `Error: ${e.message}`);
   }
 }
+
+
+main();
