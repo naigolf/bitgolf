@@ -1,7 +1,7 @@
 const axios = require('axios');
 const crypto = require('crypto');
 
-const API_BASE = 'https://api.bitkub.com/api/v3/market';
+const API_BASE = 'https://api.bitkub.com';
 
 class BitkubAPI {
   constructor(apiKey, apiSecret) {
@@ -9,61 +9,55 @@ class BitkubAPI {
     this.apiSecret = apiSecret;
   }
 
-  signPayload(payload) {
+  signPayload(stringToSign) {
     return crypto
       .createHmac('sha256', this.apiSecret)
-      .update(payload)
+      .update(stringToSign)
       .digest('hex');
   }
 
   async getTicker(symbol) {
     try {
-      const resp = await axios.get(`${API_BASE}/ticker`);
-      const data = resp.data;
-
-      let tickerData = null;
-
-      if (Array.isArray(data)) {
-        // กรองหา symbol ที่ต้องการจาก array
-        tickerData = data.find(item => item.symbol === symbol);
-      } else if (typeof data === 'object' && data !== null) {
-        // กรณี data เป็น object ที่ key เป็น symbol เช่น { "DOGE_THB": {...}, ... }
-        if (data[symbol]) {
-          tickerData = data[symbol];
-        } else if (data.symbol === symbol) {
-          // กรณี data เป็น object เดี่ยวที่มี key 'symbol'
-          tickerData = data;
-        }
-      }
-
-      if (!tickerData) {
+      const resp = await axios.get(`${API_BASE}/api/v3/market/ticker`);
+      if (!resp.data[symbol]) {
         throw new Error(`Ticker data for symbol ${symbol} not found`);
       }
-
-      console.log(`Bitkub Ticker Response for ${symbol}:`, tickerData);
-      return tickerData;
+      console.log(`Bitkub Ticker Response for ${symbol}:`, resp.data[symbol]);
+      return resp.data[symbol];
     } catch (e) {
       throw new Error('Failed to get ticker: ' + e.message);
     }
   }
 
   async getWallet() {
-    const path = '/wallet';
-    const ts = Date.now();
-    const payload = `access_key=${this.apiKey}&created=${ts}`;
-    const signature = this.signPayload(payload);
+    const path = '/api/v3/market/wallet';
+    const method = 'POST';
+    const timestamp = Date.now().toString();
+    const body = ''; // no body for wallet
+
+    const stringToSign = timestamp + method + path + body;
+    const signature = this.signPayload(stringToSign);
 
     try {
-      const resp = await axios.post(`${API_BASE}${path}`, null, {
-        params: {
-          access_key: this.apiKey,
-          created: ts,
-          signature: signature,
-        },
-        headers: { 'X-API-KEY': this.apiKey },
-      });
+      const resp = await axios.post(
+        `${API_BASE}${path}`,
+        body,
+        {
+          headers: {
+            'X-BTK-TIMESTAMP': timestamp,
+            'X-BTK-APIKEY': this.apiKey,
+            'X-BTK-SIGN': signature,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
       return resp.data;
     } catch (e) {
+      if (e.response) {
+        console.error('Wallet API response error:', e.response.status, e.response.data);
+      } else {
+        console.error('Wallet API error:', e.message);
+      }
       throw new Error('Failed to get wallet: ' + e.message);
     }
   }
@@ -71,55 +65,89 @@ class BitkubAPI {
   async placeOrder(side, symbol, price, amount) {
     if (side === 'ask') {
       return this.placeSellOrder(symbol, price, amount);
-    } else {
+    } else if (side === 'bid') {
       return this.placeBuyOrder(symbol, price, amount);
+    } else {
+      throw new Error(`Invalid order side: ${side}. Use 'bid' or 'ask'.`);
     }
   }
 
   async placeBuyOrder(symbol, price, amount) {
-    const path = '/place-bid';
-    const ts = Date.now();
-    const payload = `access_key=${this.apiKey}&amount=${amount}&price=${price}&symbol=${symbol}&created=${ts}`;
-    const signature = this.signPayload(payload);
+    const path = '/api/v3/market/place-bid';
+    const method = 'POST';
+    const timestamp = Date.now().toString();
+
+    const bodyObj = {
+      sym: symbol.toLowerCase(),
+      amt: amount,
+      rat: price,
+      typ: 'limit',  // หรือ 'market' ตามต้องการ
+    };
+    const body = JSON.stringify(bodyObj);
+
+    const stringToSign = timestamp + method + path + body;
+    const signature = this.signPayload(stringToSign);
 
     try {
-      const resp = await axios.post(`${API_BASE}${path}`, null, {
-        params: {
-          access_key: this.apiKey,
-          amount,
-          price,
-          symbol,
-          created: ts,
-          signature,
-        },
-        headers: { 'X-API-KEY': this.apiKey },
-      });
+      const resp = await axios.post(
+        `${API_BASE}${path}`,
+        body,
+        {
+          headers: {
+            'X-BTK-TIMESTAMP': timestamp,
+            'X-BTK-APIKEY': this.apiKey,
+            'X-BTK-SIGN': signature,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
       return resp.data;
     } catch (e) {
+      if (e.response) {
+        console.error('Place Buy Order response error:', e.response.status, e.response.data);
+      } else {
+        console.error('Place Buy Order error:', e.message);
+      }
       throw new Error('Failed to place buy order: ' + e.message);
     }
   }
 
   async placeSellOrder(symbol, price, amount) {
-    const path = '/place-ask';
-    const ts = Date.now();
-    const payload = `access_key=${this.apiKey}&amount=${amount}&price=${price}&symbol=${symbol}&created=${ts}`;
-    const signature = this.signPayload(payload);
+    const path = '/api/v3/market/place-ask';
+    const method = 'POST';
+    const timestamp = Date.now().toString();
+
+    const bodyObj = {
+      sym: symbol.toLowerCase(),
+      amt: amount,
+      rat: price,
+      typ: 'limit',  // หรือ 'market' ตามต้องการ
+    };
+    const body = JSON.stringify(bodyObj);
+
+    const stringToSign = timestamp + method + path + body;
+    const signature = this.signPayload(stringToSign);
 
     try {
-      const resp = await axios.post(`${API_BASE}${path}`, null, {
-        params: {
-          access_key: this.apiKey,
-          amount,
-          price,
-          symbol,
-          created: ts,
-          signature,
-        },
-        headers: { 'X-API-KEY': this.apiKey },
-      });
+      const resp = await axios.post(
+        `${API_BASE}${path}`,
+        body,
+        {
+          headers: {
+            'X-BTK-TIMESTAMP': timestamp,
+            'X-BTK-APIKEY': this.apiKey,
+            'X-BTK-SIGN': signature,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
       return resp.data;
     } catch (e) {
+      if (e.response) {
+        console.error('Place Sell Order response error:', e.response.status, e.response.data);
+      } else {
+        console.error('Place Sell Order error:', e.message);
+      }
       throw new Error('Failed to place sell order: ' + e.message);
     }
   }
