@@ -13,7 +13,6 @@ async function placeOrder(side, rate) {
   const ts = Date.now();
   const sym = process.env.SYMBOL;
   const amt = Number(process.env.TRADE_AMOUNT);
-
   const data = {
     sym, amt, rate, typ: 'limit', ts, sig: ''
   };
@@ -22,7 +21,6 @@ async function placeOrder(side, rate) {
   data.sig = sign(qs);
 
   const path = `/api/market/place-${side}`;
-
   try {
     const res = await axios.post(`${BASE_URL}${path}`, data, {
       headers: { 'X-BTK-APIKEY': process.env.API_KEY }
