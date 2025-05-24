@@ -1,34 +1,62 @@
 const crypto = require('crypto');
 const axios = require('axios');
-require('dotenv').config();
 
-const BASE_URL = 'https://api.bitkub.com';
-
-function sign(data) {
-  const hmac = crypto.createHmac('sha256', process.env.API_SECRET);
-  return hmac.update(data).digest('hex');
+function sign(params, secret) {
+  return crypto.createHmac('sha256', secret).update(new URLSearchParams(params).toString()).digest('hex');
 }
 
-async function placeOrder(side, rate) {
-  const ts = Date.now();
-  const sym = process.env.SYMBOL;
-  const amt = Number(process.env.TRADE_AMOUNT);
-  const data = {
-    sym, amt, rate, typ: 'limit', ts, sig: ''
-  };
+class BitkubAPI {
+  constructor(apiKey, apiSecret) {
+    this.apiKey = apiKey;
+    this.apiSecret = apiSecret;
+    this.apiUrl = "https://api.bitkub.com";
+  }
 
-  const qs = `amt=${amt}&rate=${rate}&sym=${sym}&ts=${ts}&typ=limit`;
-  data.sig = sign(qs);
+  async request(endpoint, params = {}, method = "POST") {
+    params.ts = Date.now();
+    params.sig = sign(params, this.apiSecret);
 
-  const path = `/api/market/place-${side}`;
-  try {
-    const res = await axios.post(`${BASE_URL}${path}`, data, {
-      headers: { 'X-BTK-APIKEY': process.env.API_KEY }
+    const headers = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-BTK-APIKEY': this.apiKey
+    };
+
+    const res = await axios({
+      method,
+      url: this.apiUrl + endpoint,
+      data: new URLSearchParams(params),
+      headers
     });
-    return res.data;
-  } catch (err) {
-    return err.response?.data || err.message;
+
+    return res.data.result;
+  }
+
+  async ticker(symbol) {
+    const res = await axios.get(`${this.apiUrl}/api/market/ticker?sym=${symbol}`);
+    return res.data[symbol];
+  }
+
+  async wallet() {
+    return await this.request("/api/market/wallet");
+  }
+
+  async placeBuyOrder(symbol, amount, rate) {
+    return await this.request("/api/market/place-bid", {
+      sym: symbol,
+      amt: amount,
+      rat: rate,
+      typ: "limit"
+    });
+  }
+
+  async placeSellOrder(symbol, amount, rate) {
+    return await this.request("/api/market/place-ask", {
+      sym: symbol,
+      amt: amount,
+      rat: rate,
+      typ: "limit"
+    });
   }
 }
 
-module.exports = { placeOrder };
+module.exports = BitkubAPI;
