@@ -49,7 +49,7 @@ class BitkubAPI {
 
   
   async getWallet() {
-  const path = '/api/market/wallet';
+  const path = '/api/market/balances';  // เปลี่ยนตรงนี้
   const method = 'POST';
   const timestamp = Date.now().toString();
 
@@ -83,6 +83,7 @@ class BitkubAPI {
     throw new Error('Failed to get wallet: ' + e.message);
   }
 }
+
 
 
   async placeOrder(side, symbol, price, amount) {
