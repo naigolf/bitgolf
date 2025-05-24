@@ -15,21 +15,6 @@ class BitkubAPI {
       .update(stringToSign)
       .digest('hex');
   }
-/*
-  async getTicker(symbol) {
-    try {
-      const resp = await axios.get(`${API_BASE}/api/v3/market/ticker`);
-      if (!resp.data[symbol]) {
-        throw new Error(`Ticker data for symbol ${symbol} not found`);
-      }
-      console.log(`Bitkub Ticker Response for ${symbol}:`, resp.data[symbol]);
-      return resp.data[symbol];
-    } catch (e) {
-      throw new Error('Failed to get ticker: ' + e.message);
-    }
-  }
-*/
-
 
   async getTicker(symbol) {
   try {
@@ -123,6 +108,7 @@ class BitkubAPI {
             'X-BTK-SIGN': signature,
             'Content-Type': 'application/json',
           },
+          timeout: 10000, // 10 วินาที
         }
       );
       return resp.data;
