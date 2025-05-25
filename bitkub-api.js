@@ -93,14 +93,14 @@ class BitkubAPI {
       throw new Error('Invalid parameters: symbol, price or amount is incorrect');
     }
 
-    const formattedSymbol = symbol.trim().toUpperCase();
-    const bodyObj = {
-      sym: formattedSymbol,
-      amt: parseFloat(amount),
-      rat: parseFloat(price),
-      typ: 'limit',
-    };
-
+    const formattedSymbol = symbol.trim().toLowerCase();
+const bodyObj = {
+  sym: formattedSymbol,
+  amt: parseFloat(amount),
+  rat: parseFloat(price),
+  typ: 'limit',
+};
+    
     const bodyStr = JSON.stringify(bodyObj);
     const stringToSign = ts + method + path + bodyStr;
     const signature = this.signPayload(stringToSign);
