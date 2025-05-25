@@ -23,18 +23,18 @@ class BitkubAPI {
   }
 
   async getTicker(symbol) {
-    try {
-      const formattedSymbol = this.formatSymbol(symbol).toUpperCase();
-      const resp = await axios.get(`${API_BASE}/api/market/ticker`);
-      if (!resp.data[formattedSymbol]) {
-        console.error('❌ Symbol not found in ticker:', formattedSymbol);
-        throw new Error(`Ticker data for symbol ${formattedSymbol} not found`);
-      }
-      return resp.data[formattedSymbol];
-    } catch (e) {
-      console.error('❌ Failed to get ticker:', e.message);
-      throw new Error('Failed to get ticker: ' + e.message);
+  try {
+    const formattedSymbol = this.formatSymbol(symbol); // ไม่แปลงเป็น uppercase
+    const resp = await axios.get(`${API_BASE}/api/market/ticker`);
+    if (!resp.data[formattedSymbol]) {
+      console.error('❌ Symbol not found in ticker:', formattedSymbol);
+      throw new Error(`Ticker data for symbol ${formattedSymbol} not found`);
     }
+    return resp.data[formattedSymbol];
+  } catch (e) {
+    console.error('❌ Failed to get ticker:', e.message);
+    throw new Error('Failed to get ticker: ' + e.message);
+  }
   }
 
   async getWallet() {
