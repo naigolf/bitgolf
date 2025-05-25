@@ -16,14 +16,21 @@ class BitkubAPI {
       .digest('hex');
   }
 
+  formatSymbol(symbol) {
+    if (!symbol.includes('_')) return symbol.toLowerCase();
+    const [base, coin] = symbol.toLowerCase().split('_');
+    return `${coin}_${base}`; // THB_DOGE → doge_thb
+  }
+
   async getTicker(symbol) {
     try {
+      const formattedSymbol = this.formatSymbol(symbol).toUpperCase();
       const resp = await axios.get(`${API_BASE}/api/market/ticker`);
-      if (!resp.data[symbol]) {
-        console.error('❌ Symbol not found in ticker:', symbol);
-        throw new Error(`Ticker data for symbol ${symbol} not found`);
+      if (!resp.data[formattedSymbol]) {
+        console.error('❌ Symbol not found in ticker:', formattedSymbol);
+        throw new Error(`Ticker data for symbol ${formattedSymbol} not found`);
       }
-      return resp.data[symbol];
+      return resp.data[formattedSymbol];
     } catch (e) {
       console.error('❌ Failed to get ticker:', e.message);
       throw new Error('Failed to get ticker: ' + e.message);
@@ -85,27 +92,27 @@ class BitkubAPI {
     const method = 'POST';
     const ts = Date.now();
 
+    const formattedSymbol = this.formatSymbol(symbol);
     console.log('\n===== NEW ORDER =====');
     console.log('Raw Params:', { symbol, price, amount });
+    console.log('Formatted Symbol:', formattedSymbol);
 
-    if (!symbol || isNaN(price) || isNaN(amount)) {
-      console.error('❌ Invalid parameters:', { symbol, price, amount });
+    if (!formattedSymbol || isNaN(price) || isNaN(amount)) {
+      console.error('❌ Invalid parameters:', { formattedSymbol, price, amount });
       throw new Error('Invalid parameters: symbol, price or amount is incorrect');
     }
 
-    const formattedSymbol = symbol.trim().toLowerCase();
-const bodyObj = {
-  sym: formattedSymbol,
-  amt: parseFloat(amount),
-  rat: parseFloat(price),
-  typ: 'limit',
-};
-    
+    const bodyObj = {
+      sym: formattedSymbol,
+      amt: parseFloat(amount),
+      rat: parseFloat(price),
+      typ: 'limit',
+    };
+
     const bodyStr = JSON.stringify(bodyObj);
     const stringToSign = ts + method + path + bodyStr;
     const signature = this.signPayload(stringToSign);
 
-    console.log('Formatted Symbol:', formattedSymbol);
     console.log('String to Sign:', stringToSign);
     console.log('Signature:', signature);
 
