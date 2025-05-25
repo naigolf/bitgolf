@@ -17,88 +17,27 @@ class BitkubAPI {
   }
 
   async getTicker(symbol) {
-  try {
-    const resp = await axios.get(`${API_BASE}/api/market/ticker`);
-    console.log('Available symbols:', Object.keys(resp.data));
-    
-    if (!resp.data[symbol]) {
-      throw new Error(`Ticker data for symbol ${symbol} not found`);
-    }
+    try {
+      const resp = await axios.get(`${API_BASE}/api/market/ticker`);
+      console.log('Available symbols:', Object.keys(resp.data));
 
-    console.log(`Bitkub Ticker Response for ${symbol}:`, resp.data[symbol]);
-    return resp.data[symbol];
-  } catch (e) {
-    throw new Error('Failed to get ticker: ' + e.message);
-  }
-}
-
-  
-  async getWallet() {
-  const path = '/api/v3/market/wallet'; // ใช้ secure endpoint v3
-  const method = 'POST';
-  const timestamp = Date.now().toString();
-
-  const bodyObj = { ts: Number(timestamp) };
-  const body = JSON.stringify(bodyObj);
-
-  const stringToSign = timestamp + method + path + body;
-  const signature = this.signPayload(stringToSign);
-
-  try {
-    const resp = await axios.post(
-      `${API_BASE}${path}`,
-      body,
-      {
-        headers: {
-          'X-BTK-TIMESTAMP': timestamp,
-          'X-BTK-APIKEY': this.apiKey,
-          'X-BTK-SIGN': signature,
-          'Content-Type': 'application/json',
-        },
+      if (!resp.data[symbol]) {
+        throw new Error(`Ticker data for symbol ${symbol} not found`);
       }
-    );
-    return resp.data;
-  } catch (e) {
-    if (e.response) {
-      console.error('Wallet API response error:', e.response.status, e.response.data);
-    } else {
-      console.error('Wallet API error:', e.message);
-    }
-    throw new Error('Failed to get wallet: ' + e.message);
-  }
-}
 
-
-
-
-  async placeOrder(side, symbol, price, amount) {
-    if (side === 'ask') {
-      return this.placeSellOrder(symbol, price, amount);
-    } else if (side === 'bid') {
-      return this.placeBuyOrder(symbol, price, amount);
-    } else {
-      throw new Error(`Invalid order side: ${side}. Use 'bid' or 'ask'.`);
+      console.log(`Bitkub Ticker Response for ${symbol}:`, resp.data[symbol]);
+      return resp.data[symbol];
+    } catch (e) {
+      throw new Error('Failed to get ticker: ' + e.message);
     }
   }
 
-  async placeBuyOrder(symbol, price, amount) {
-    const path = '/api/v3/market/place-bid';
+  async getWallet() {
+    const path = '/api/v3/market/wallet';
     const method = 'POST';
     const timestamp = Date.now().toString();
 
-  
-
-
-   const bodyObj = {
-  sym: symbol.toLowerCase(),
-  amt: parseFloat(amount),  // เปลี่ยนจาก String(amount)
-  rat: parseFloat(price),   // เปลี่ยนจาก String(price)
-  typ: 'limit',
-};
-
-
-
-    
+    const bodyObj = { ts: Number(timestamp) };
     const body = JSON.stringify(bodyObj);
 
     const stringToSign = timestamp + method + path + body;
@@ -115,7 +54,62 @@ class BitkubAPI {
             'X-BTK-SIGN': signature,
             'Content-Type': 'application/json',
           },
-          timeout: 10000, // 10 วินาที
+        }
+      );
+      return resp.data;
+    } catch (e) {
+      if (e.response) {
+        console.error('Wallet API response error:', e.response.status, e.response.data);
+      } else {
+        console.error('Wallet API error:', e.message);
+      }
+      throw new Error('Failed to get wallet: ' + e.message);
+    }
+  }
+
+  // Utility to remove trailing zeros
+  cleanNumber(num) {
+    return parseFloat(num).toString();
+  }
+
+  async placeOrder(side, symbol, price, amount) {
+    if (side === 'ask') {
+      return this.placeSellOrder(symbol, price, amount);
+    } else if (side === 'bid') {
+      return this.placeBuyOrder(symbol, price, amount);
+    } else {
+      throw new Error(`Invalid order side: ${side}. Use 'bid' or 'ask'.`);
+    }
+  }
+
+  async placeBuyOrder(symbol, price, amount) {
+    const path = '/api/v3/market/place-bid';
+    const method = 'POST';
+    const timestamp = Date.now().toString();
+
+    const bodyObj = {
+      sym: symbol.toLowerCase(),
+      amt: this.cleanNumber(amount),
+      rat: this.cleanNumber(price),
+      typ: 'limit',
+    };
+
+    const body = JSON.stringify(bodyObj);
+    const stringToSign = timestamp + method + path + body;
+    const signature = this.signPayload(stringToSign);
+
+    try {
+      const resp = await axios.post(
+        `${API_BASE}${path}`,
+        body,
+        {
+          headers: {
+            'X-BTK-TIMESTAMP': timestamp,
+            'X-BTK-APIKEY': this.apiKey,
+            'X-BTK-SIGN': signature,
+            'Content-Type': 'application/json',
+          },
+          timeout: 10000,
         }
       );
       return resp.data;
@@ -135,15 +129,13 @@ class BitkubAPI {
     const timestamp = Date.now().toString();
 
     const bodyObj = {
-  sym: symbol.toLowerCase(),
-  amt: parseFloat(amount),  // เปลี่ยนจาก String(amount)
-  rat: parseFloat(price),   // เปลี่ยนจาก String(price)
-  typ: 'limit',
-};
+      sym: symbol.toLowerCase(),
+      amt: this.cleanNumber(amount),
+      rat: this.cleanNumber(price),
+      typ: 'limit',
+    };
 
-    
     const body = JSON.stringify(bodyObj);
-
     const stringToSign = timestamp + method + path + body;
     const signature = this.signPayload(stringToSign);
 
