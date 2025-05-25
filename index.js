@@ -34,8 +34,9 @@ async function main() {
     if (isNaN(price)) throw new Error(`Invalid last price: ${ticker.last}`);
 
     const wallet = await api.getWallet();
-    console.log('Raw wallet response:', wallet);
-    const thbBalance = wallet['THB'] || 0;
+   // console.log('Raw wallet response:', wallet);
+   // const thbBalance = wallet['THB'] || 0;
+   const thbBalance = (wallet && wallet.result && wallet.result.THB) || 0;
 
     const buyPrice = price * (1 - BUY_PERCENT / 100);
     const sellPrice = price * (1 + SELL_PERCENT / 100);
