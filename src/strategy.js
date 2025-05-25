@@ -21,7 +21,7 @@ async function executeStrategy() {
   if (priceChange <= BUY_THRESHOLD) {
     const wallet = await getWallet();
     const thbBalance = wallet.THb.available;
-    const amountToSpend = Math.min(thbBalance, 100); // จำกัดการใช้ทุน
+    const amountToSpend = Math.min(thbBalance, 30); // จำกัดการใช้ทุน
     const bidResult = await placeBid(SYMBOL, amountToSpend);
     await sendTelegramMessage(`ซื้อ DOGE ที่ราคา ${currentPrice} บาท จำนวน ${amountToSpend} บาท`);
     lastPrice = currentPrice;
