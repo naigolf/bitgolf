@@ -61,8 +61,12 @@ async function main() {
 
 
     
+    //const buyOrder = await api.placeOrder('bid', SYMBOL, buyPrice.toFixed(4), buyAmount);
+
     const buyOrder = await api.placeOrder('bid', SYMBOL, buyPrice.toFixed(4), buyAmount);
 
+
+    
     if (buyOrder.error) {
       await sendTelegram(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, `❌ ซื้อไม่สำเร็จ: ${buyOrder.error.message || JSON.stringify(buyOrder)}`);
       return;
