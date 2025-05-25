@@ -86,12 +86,19 @@ class BitkubAPI {
     const method = 'POST';
     const timestamp = Date.now().toString();
 
-    const bodyObj = {
-      sym: symbol.toLowerCase(),
-      amt: String(amount),
-      rat: String(price),
-      typ: 'limit',
-    };
+  
+
+
+   const bodyObj = {
+  sym: symbol.toLowerCase(),
+  amt: parseFloat(amount),  // เปลี่ยนจาก String(amount)
+  rat: parseFloat(price),   // เปลี่ยนจาก String(price)
+  typ: 'limit',
+};
+
+
+
+    
     const body = JSON.stringify(bodyObj);
 
     const stringToSign = timestamp + method + path + body;
@@ -128,11 +135,13 @@ class BitkubAPI {
     const timestamp = Date.now().toString();
 
     const bodyObj = {
-      sym: symbol.toLowerCase(),
-      amt: String(amount),
-      rat: String(price),
-      typ: 'limit',
-    };
+  sym: symbol.toLowerCase(),
+  amt: parseFloat(amount),  // เปลี่ยนจาก String(amount)
+  rat: parseFloat(price),   // เปลี่ยนจาก String(price)
+  typ: 'limit',
+};
+
+    
     const body = JSON.stringify(bodyObj);
 
     const stringToSign = timestamp + method + path + body;
