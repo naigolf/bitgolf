@@ -1,8 +1,12 @@
 {
-  "name": "bitkub-trading-bot",
+  "name": "bitkub-bot",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
   "dependencies": {
-    "axios": "^1.6.8"
+    "axios": "^1.4.0",
+    "dotenv": "^16.3.1"
   }
 }
