@@ -51,7 +51,8 @@ async function main() {
       return;
     }
 
-    const buyAmount = (TRADE_AMOUNT / buyPrice).toFixed(6);
+    const buyAmount = parseFloat((TRADE_AMOUNT / buyPrice).toFixed(6));
+    //const buyAmount = (TRADE_AMOUNT / buyPrice).toFixed(6);
     const buyOrder = await api.placeOrder('bid', SYMBOL, buyPrice.toFixed(4), buyAmount);
 
     if (buyOrder.error) {
