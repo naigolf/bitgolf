@@ -1,10 +1,8 @@
 {
-  "name": "bitkub-scalping-bot",
+  "name": "bitkub-trading-bot",
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
-    "axios": "^1.4.0",
-    "crypto": "^1.0.1",
-    "dotenv": "^16.0.0"
+    "axios": "^1.6.8"
   }
 }
