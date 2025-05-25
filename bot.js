@@ -6,70 +6,57 @@ const CryptoJS = require('crypto-js');
 const {
   BITKUB_API_KEY,
   BITKUB_API_SECRET,
-  TRADE_SYMBOL,
-  BUY_DIP_PERCENT,
-  SELL_GAIN_PERCENT,
-  TRADE_AMOUNT
+  TRADE_SYMBOL = 'THB_DOGE',
+  BUY_DIP_PERCENT = 2,
+  SELL_GAIN_PERCENT = 3,
+  TRADE_AMOUNT = 50
 } = process.env;
 
 const BASE_URL = 'https://api.bitkub.com';
 
-// ฟังก์ชันสร้างลายเซ็น
-/*
-function generateSignature(payload) {
-  return CryptoJS.HmacSHA256(JSON.stringify(payload), BITKUB_API_SECRET).toString();
+// ฟังก์ชันดึงเวลาปัจจุบันจากเซิร์ฟเวอร์ Bitkub
+async function getServerTime() {
+  try {
+    const response = await axios.get(`${BASE_URL}/api/v3/servertime`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting server time:', error.message);
+    return Date.now(); // Fallback to local time if API fails
+  }
 }
-*/
-function generateSignature(payload) {
-  // แปลง payload เป็น string ถ้ายังไม่ใช่
-  const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+
+// ฟังก์ชันสร้างลายเซ็นแบบใหม่ตามเอกสาร Bitkub
+async function generateSignature(httpMethod, endpoint, payload = null) {
+  const timestamp = await getServerTime();
+  let message = `${timestamp}${httpMethod}${endpoint}`;
   
-  // สร้าง signature ด้วย crypto-js
-  const signature = CryptoJS.HmacSHA256(
-    payloadString,
-    BITKUB_API_SECRET
-  ).toString(CryptoJS.enc.Hex);
+  if (httpMethod === 'POST' && payload) {
+    message += JSON.stringify(payload);
+  } else if (httpMethod === 'GET' && payload) {
+    const queryString = new URLSearchParams(payload).toString();
+    if (queryString) {
+      message += `?${queryString}`;
+    }
+  }
   
-  return signature;
+  return {
+    signature: CryptoJS.HmacSHA256(message, BITKUB_API_SECRET).toString(CryptoJS.enc.Hex),
+    timestamp: timestamp
+  };
 }
 
 // ตรวจสอบยอดเงินใน wallet
-/*
 async function checkWalletBalance() {
   try {
-    const ts = Date.now();
-    const payload = { ts };
-    const signature = generateSignature(payload);
-
-    const response = await axios.post(`${BASE_URL}/api/market/wallet`, payload, {
+    const endpoint = '/api/v3/market/wallet';
+    const { signature, timestamp } = await generateSignature('GET', endpoint);
+    
+    const response = await axios.get(`${BASE_URL}${endpoint}`, {
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
         'X-BTK-APIKEY': BITKUB_API_KEY,
-        'X-BTK-SIGN': signature
-      }
-    });
-
-    return response.data;
-  } catch (error) {
-    console.error('Error checking wallet:', error.response?.data || error.message);
-    throw error;
-  }
-}
-*/
-
-async function checkWalletBalance() {
-  try {
-    const ts = Date.now();
-    const payload = { ts };
-    const signature = generateSignature(payload);
-
-    const response = await axios.post(`${BASE_URL}/api/market/wallet`, payload, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'X-BTK-APIKEY': BITKUB_API_KEY,
-        'X-BTK-SIGN': signature
+        'X-BTK-SIGN': signature,
+        'X-BTK-TIMESTAMP': timestamp.toString()
       }
     });
 
@@ -80,11 +67,11 @@ async function checkWalletBalance() {
   }
 }
 
-// ตรวจสอบราคาปัจจุบัน
-async function getCurrentPrice() {
+// ตรวจสอบราคาปัจจุบัน (public API ไม่ต้องใช้ signature)
+async function getCurrentPrice(symbol) {
   try {
-    const response = await axios.get(`${BASE_URL}/api/market/ticker?sym=${TRADE_SYMBOL}`);
-    return response.data[TRADE_SYMBOL].last;
+    const response = await axios.get(`${BASE_URL}/api/market/ticker?sym=${symbol}`);
+    return response.data[symbol].last;
   } catch (error) {
     console.error('Error getting price:', error.message);
     throw error;
@@ -92,24 +79,25 @@ async function getCurrentPrice() {
 }
 
 // สั่งซื้อ
-async function placeBuyOrder(price) {
+async function placeBuyOrder(symbol, amount, price) {
   try {
-    const amount = (TRADE_AMOUNT / price).toFixed(2);
-    const ts = Date.now();
+    const endpoint = '/api/v3/market/place-bid';
     const payload = {
-      sym: TRADE_SYMBOL,
+      sym: symbol.toLowerCase(),
       amt: amount,
       rat: price,
-      typ: 'limit',
-      ts
+      typ: 'limit'
     };
-
-    const signature = generateSignature(payload);
-
-    const response = await axios.post(`${BASE_URL}/api/market/place-bid`, payload, {
+    
+    const { signature, timestamp } = await generateSignature('POST', endpoint, payload);
+    
+    const response = await axios.post(`${BASE_URL}${endpoint}`, payload, {
       headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
         'X-BTK-APIKEY': BITKUB_API_KEY,
-        'X-BTK-SIGN': signature
+        'X-BTK-SIGN': signature,
+        'X-BTK-TIMESTAMP': timestamp.toString()
       }
     });
 
@@ -121,23 +109,25 @@ async function placeBuyOrder(price) {
 }
 
 // สั่งขาย
-async function placeSellOrder(amount, price) {
+async function placeSellOrder(symbol, amount, price) {
   try {
-    const ts = Date.now();
+    const endpoint = '/api/v3/market/place-ask';
     const payload = {
-      sym: TRADE_SYMBOL,
+      sym: symbol.toLowerCase(),
       amt: amount,
       rat: price,
-      typ: 'limit',
-      ts
+      typ: 'limit'
     };
-
-    const signature = generateSignature(payload);
-
-    const response = await axios.post(`${BASE_URL}/api/market/place-ask`, payload, {
+    
+    const { signature, timestamp } = await generateSignature('POST', endpoint, payload);
+    
+    const response = await axios.post(`${BASE_URL}${endpoint}`, payload, {
       headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
         'X-BTK-APIKEY': BITKUB_API_KEY,
-        'X-BTK-SIGN': signature
+        'X-BTK-SIGN': signature,
+        'X-BTK-TIMESTAMP': timestamp.toString()
       }
     });
 
@@ -149,16 +139,19 @@ async function placeSellOrder(amount, price) {
 }
 
 // ตรวจสอบคำสั่งซื้อที่เปิดอยู่
-async function checkOpenOrders() {
+async function checkOpenOrders(symbol) {
   try {
-    const ts = Date.now();
-    const payload = { sym: TRADE_SYMBOL, ts };
-    const signature = generateSignature(payload);
-
-    const response = await axios.post(`${BASE_URL}/api/market/my-open-orders`, payload, {
+    const endpoint = '/api/v3/market/my-open-orders';
+    const payload = { sym: symbol };
+    const { signature, timestamp } = await generateSignature('GET', endpoint, payload);
+    
+    const response = await axios.get(`${BASE_URL}${endpoint}`, {
+      params: payload,
       headers: {
+        'Accept': 'application/json',
         'X-BTK-APIKEY': BITKUB_API_KEY,
-        'X-BTK-SIGN': signature
+        'X-BTK-SIGN': signature,
+        'X-BTK-TIMESTAMP': timestamp.toString()
       }
     });
 
@@ -172,24 +165,32 @@ async function checkOpenOrders() {
 // กลยุทธ์ Mini-Scalping
 async function executeStrategy() {
   try {
+    console.log('Starting DOGE Mini-Scalping Bot...');
+    console.log('Configuration:', {
+      symbol: TRADE_SYMBOL,
+      buyDip: `${BUY_DIP_PERCENT}%`,
+      sellGain: `${SELL_GAIN_PERCENT}%`,
+      amount: `${TRADE_AMOUNT} THB`
+    });
+
     // ตรวจสอบยอดเงิน
     const wallet = await checkWalletBalance();
     console.log('Wallet Balance:', wallet.THB, 'THB');
     
     if (wallet.THB < TRADE_AMOUNT) {
-      console.log('ไม่มียอดเงินเพียงพอสำหรับการเทรด');
+      console.log('Not enough THB balance for trading');
       return;
     }
 
     // ตรวจสอบคำสั่งซื้อที่เปิดอยู่
-    const openOrders = await checkOpenOrders();
-    if (openOrders.length > 0) {
-      console.log('มีคำสั่งซื้อที่ยังไม่เสร็จสิ้น รอการดำเนินการ...');
+    const openOrders = await checkOpenOrders(TRADE_SYMBOL);
+    if (openOrders && openOrders.length > 0) {
+      console.log('There are pending orders, skipping...');
       return;
     }
 
     // ตรวจสอบราคาปัจจุบัน
-    const currentPrice = await getCurrentPrice();
+    const currentPrice = await getCurrentPrice(TRADE_SYMBOL);
     console.log('Current Price:', currentPrice, 'THB');
 
     // ตรวจสอบว่ามี DOGE ในพอร์ตหรือไม่
@@ -200,14 +201,15 @@ async function executeStrategy() {
       const sellPrice = (currentPrice * (1 + (SELL_GAIN_PERCENT/100))).toFixed(6);
       console.log(`Attempting to sell DOGE at ${sellPrice} THB (${SELL_GAIN_PERCENT}% gain)`);
       
-      const sellResult = await placeSellOrder(dogeBalance, sellPrice);
+      const sellResult = await placeSellOrder(TRADE_SYMBOL, dogeBalance, sellPrice);
       console.log('Sell Order Result:', sellResult);
     } else {
       // ถ้าไม่มี DOGE ให้ตรวจสอบเพื่อซื้อ
       const buyPrice = (currentPrice * (1 - (BUY_DIP_PERCENT/100))).toFixed(6);
       console.log(`Attempting to buy DOGE at ${buyPrice} THB (${BUY_DIP_PERCENT}% dip)`);
       
-      const buyResult = await placeBuyOrder(buyPrice);
+      const buyAmount = (TRADE_AMOUNT / buyPrice).toFixed(2);
+      const buyResult = await placeBuyOrder(TRADE_SYMBOL, buyAmount, buyPrice);
       console.log('Buy Order Result:', buyResult);
     }
   } catch (error) {
@@ -216,14 +218,4 @@ async function executeStrategy() {
 }
 
 // เรียกใช้งาน
-(async () => {
-  console.log('Starting DOGE Mini-Scalping Bot...');
-  console.log('Configuration:', {
-    symbol: TRADE_SYMBOL,
-    buyDip: `${BUY_DIP_PERCENT}%`,
-    sellGain: `${SELL_GAIN_PERCENT}%`,
-    amount: `${TRADE_AMOUNT} THB`
-  });
-  
-  await executeStrategy();
-})();
+executeStrategy();
