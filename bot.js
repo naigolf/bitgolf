@@ -26,17 +26,13 @@ async function getServerTime() {
 }
 
 // ฟังก์ชันสร้างลายเซ็นแบบใหม่ตามเอกสาร Bitkub
-async function generateSignature(httpMethod, endpoint, payload = null) {
+async function generateSignature(httpMethod, endpoint, payload = {}) {
   const timestamp = await getServerTime();
   let message = `${timestamp}${httpMethod}${endpoint}`;
   
-  if (httpMethod === 'POST' && payload) {
+  // สำหรับ POST request ต้องเพิ่ม payload ใน message
+  if (httpMethod === 'POST') {
     message += JSON.stringify(payload);
-  } else if (httpMethod === 'GET' && payload) {
-    const queryString = new URLSearchParams(payload).toString();
-    if (queryString) {
-      message += `?${queryString}`;
-    }
   }
   
   return {
@@ -49,11 +45,13 @@ async function generateSignature(httpMethod, endpoint, payload = null) {
 async function checkWalletBalance() {
   try {
     const endpoint = '/api/v3/market/wallet';
-    const { signature, timestamp } = await generateSignature('GET', endpoint);
+    const payload = {}; // Payload ว่างสำหรับ wallet endpoint
+    const { signature, timestamp } = await generateSignature('POST', endpoint, payload);
     
-    const response = await axios.get(`${BASE_URL}${endpoint}`, {
+    const response = await axios.post(`${BASE_URL}${endpoint}`, payload, {
       headers: {
         'Accept': 'application/json',
+        'Content-Type': 'application/json',
         'X-BTK-APIKEY': BITKUB_API_KEY,
         'X-BTK-SIGN': signature,
         'X-BTK-TIMESTAMP': timestamp.toString()
@@ -143,12 +141,12 @@ async function checkOpenOrders(symbol) {
   try {
     const endpoint = '/api/v3/market/my-open-orders';
     const payload = { sym: symbol };
-    const { signature, timestamp } = await generateSignature('GET', endpoint, payload);
+    const { signature, timestamp } = await generateSignature('POST', endpoint, payload);
     
-    const response = await axios.get(`${BASE_URL}${endpoint}`, {
-      params: payload,
+    const response = await axios.post(`${BASE_URL}${endpoint}`, payload, {
       headers: {
         'Accept': 'application/json',
+        'Content-Type': 'application/json',
         'X-BTK-APIKEY': BITKUB_API_KEY,
         'X-BTK-SIGN': signature,
         'X-BTK-TIMESTAMP': timestamp.toString()
@@ -217,5 +215,41 @@ async function executeStrategy() {
   }
 }
 
-// เรียกใช้งาน
-executeStrategy();
+
+
+async function verifyApiSetup() {
+  try {
+    // ตรวจสอบ server time
+    const serverTime = await getServerTime();
+    console.log('Server Time:', serverTime);
+    
+    // ตรวจสอบ wallet
+    const wallet = await checkWalletBalance();
+    console.log('Wallet Balance:', Object.keys(wallet).filter(k => wallet[k] > 0));
+    
+    // ตรวจสอบ ticker
+    const ticker = await getCurrentPrice(TRADE_SYMBOL);
+    console.log('Current Price:', ticker);
+    
+    return true;
+  } catch (error) {
+    console.error('API Verification Failed:', error.response?.data || error.message);
+    return false;
+  }
+}
+
+
+(async () => {
+  console.log('Starting DOGE Mini-Scalping Bot...');
+  
+  // ตรวจสอบการตั้งค่า API ก่อน
+  const apiVerified = await verifyApiSetup();
+  if (!apiVerified) {
+    console.log('API Setup Verification Failed. Please check your configuration.');
+    return;
+  }
+  
+  // รันกลยุทธ์หลัก
+  await executeStrategy();
+})();
+
