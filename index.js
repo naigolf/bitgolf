@@ -51,8 +51,16 @@ async function main() {
       return;
     }
 
-    const buyAmount = parseFloat((TRADE_AMOUNT / buyPrice).toFixed(6));
+    //const buyAmount = parseFloat((TRADE_AMOUNT / buyPrice).toFixed(6));
     //const buyAmount = (TRADE_AMOUNT / buyPrice).toFixed(6);
+
+
+    const feeRate = 0.0025;  // ค่าธรรมเนียม 0.25%
+    const netAmount = TRADE_AMOUNT * (1 - feeRate);  // หักค่าธรรมเนียมล่วงหน้า
+    const buyAmount = (netAmount / buyPrice).toFixed(6);
+
+
+    
     const buyOrder = await api.placeOrder('bid', SYMBOL, buyPrice.toFixed(4), buyAmount);
 
     if (buyOrder.error) {
