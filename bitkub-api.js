@@ -19,13 +19,9 @@ class BitkubAPI {
   async getTicker(symbol) {
     try {
       const resp = await axios.get(`${API_BASE}/api/market/ticker`);
-      console.log('Available symbols:', Object.keys(resp.data));
-
       if (!resp.data[symbol]) {
         throw new Error(`Ticker data for symbol ${symbol} not found`);
       }
-
-      console.log(`Bitkub Ticker Response for ${symbol}:`, resp.data[symbol]);
       return resp.data[symbol];
     } catch (e) {
       throw new Error('Failed to get ticker: ' + e.message);
@@ -35,21 +31,20 @@ class BitkubAPI {
   async getWallet() {
     const path = '/api/v3/market/wallet';
     const method = 'POST';
-    const timestamp = Date.now().toString();
+    const ts = Date.now();
 
-    const bodyObj = { ts: Number(timestamp) };
-    const body = JSON.stringify(bodyObj);
-
-    const stringToSign = timestamp + method + path + body;
+    const bodyObj = { ts };
+    const bodyStr = JSON.stringify(bodyObj);
+    const stringToSign = ts + method + path + bodyStr;
     const signature = this.signPayload(stringToSign);
 
     try {
       const resp = await axios.post(
         `${API_BASE}${path}`,
-        body,
+        bodyObj,
         {
           headers: {
-            'X-BTK-TIMESTAMP': timestamp,
+            'X-BTK-TIMESTAMP': ts.toString(),
             'X-BTK-APIKEY': this.apiKey,
             'X-BTK-SIGN': signature,
             'Content-Type': 'application/json',
@@ -58,18 +53,8 @@ class BitkubAPI {
       );
       return resp.data;
     } catch (e) {
-      if (e.response) {
-        console.error('Wallet API response error:', e.response.status, e.response.data);
-      } else {
-        console.error('Wallet API error:', e.message);
-      }
-      throw new Error('Failed to get wallet: ' + e.message);
+      throw new Error('Failed to get wallet: ' + (e.response?.data?.error || e.message));
     }
-  }
-
-  // Utility to remove trailing zeros
-  cleanNumber(num) {
-    return parseFloat(num).toString();
   }
 
   async placeOrder(side, symbol, price, amount) {
@@ -82,33 +67,47 @@ class BitkubAPI {
     }
   }
 
+  cleanNumber(num) {
+    return parseFloat(num).toString(); // remove trailing zeros like 1000.00 → 1000
+  }
+
   async placeBuyOrder(symbol, price, amount) {
     const path = '/api/v3/market/place-bid';
-    const method = 'POST';
-    const timestamp = Date.now().toString();
+    return this._placeOrder(path, symbol, price, amount);
+  }
 
+  async placeSellOrder(symbol, price, amount) {
+    const path = '/api/v3/market/place-ask';
+    return this._placeOrder(path, symbol, price, amount);
+  }
+
+  async _placeOrder(path, symbol, price, amount) {
+    const method = 'POST';
+    const ts = Date.now();
+
+    // Validate input
+    if (!symbol || isNaN(price) || isNaN(amount)) {
+      throw new Error('Invalid parameters: symbol, price or amount is incorrect');
+    }
 
     const bodyObj = {
-  sym: symbol.toLowerCase(),
-  amt: parseFloat(amount),
-  rat: parseFloat(price),
-  typ: 'limit',
-};
+      sym: symbol.toLowerCase(),
+      amt: parseFloat(amount),
+      rat: parseFloat(price),
+      typ: 'limit',
+    };
 
-// อย่าใช้ JSON.stringify
-const body = bodyObj;
-
-const stringToSign = timestamp + method + path + JSON.stringify(body);
-    
+    const bodyStr = JSON.stringify(bodyObj);
+    const stringToSign = ts + method + path + bodyStr;
     const signature = this.signPayload(stringToSign);
 
     try {
       const resp = await axios.post(
         `${API_BASE}${path}`,
-        body,
+        bodyObj,
         {
           headers: {
-            'X-BTK-TIMESTAMP': timestamp,
+            'X-BTK-TIMESTAMP': ts.toString(),
             'X-BTK-APIKEY': this.apiKey,
             'X-BTK-SIGN': signature,
             'Content-Type': 'application/json',
@@ -118,56 +117,8 @@ const stringToSign = timestamp + method + path + JSON.stringify(body);
       );
       return resp.data;
     } catch (e) {
-      if (e.response) {
-        console.error('Place Buy Order response error:', e.response.status, e.response.data);
-      } else {
-        console.error('Place Buy Order error:', e.message);
-      }
-      throw new Error('Failed to place buy order: ' + e.message);
-    }
-  }
-
-  async placeSellOrder(symbol, price, amount) {
-    const path = '/api/v3/market/place-ask';
-    const method = 'POST';
-    const timestamp = Date.now().toString();
-
-
-
-    const bodyObj = {
-  sym: symbol.toLowerCase(),
-  amt: parseFloat(amount),
-  rat: parseFloat(price),
-  typ: 'limit',
-};
-
-// อย่าใช้ JSON.stringify
-const body = bodyObj;
-
-const stringToSign = timestamp + method + path + JSON.stringify(body);
-    const signature = this.signPayload(stringToSign);
-
-    try {
-      const resp = await axios.post(
-        `${API_BASE}${path}`,
-        body,
-        {
-          headers: {
-            'X-BTK-TIMESTAMP': timestamp,
-            'X-BTK-APIKEY': this.apiKey,
-            'X-BTK-SIGN': signature,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      return resp.data;
-    } catch (e) {
-      if (e.response) {
-        console.error('Place Sell Order response error:', e.response.status, e.response.data);
-      } else {
-        console.error('Place Sell Order error:', e.message);
-      }
-      throw new Error('Failed to place sell order: ' + e.message);
+      console.error('Order failed:', e.response?.data || e.message);
+      throw new Error(`Failed to place order: ${JSON.stringify(e.response?.data || e.message)}`);
     }
   }
 }
