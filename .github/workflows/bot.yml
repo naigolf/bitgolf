@@ -1,8 +1,8 @@
 name: Bitkub Trading Bot
 
 on:
-  schedule:
-    - cron: '*/30 * * * *' # Run every 5 minutes
+  # schedule:
+  #  - cron: '*/30 * * * *' # Run every 5 minutes
   workflow_dispatch:
 
 jobs:
