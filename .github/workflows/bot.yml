@@ -22,8 +22,8 @@ jobs:
       
     - name: Run Bot
       env:
-        BITKUB_API_KEY: ${{ secrets.API_KEY }}
-        BITKUB_API_SECRET: ${{ secrets.API_SECRET }}
+        BITKUB_API_KEY: ${{ secrets.BITKUB_API_KEY }}
+        BITKUB_API_SECRET: ${{ secrets.BITKUB_API_SECRET }}
         TRADE_SYMBOL: THB_DOGE
         BUY_DIP_PERCENT: 2
         SELL_GAIN_PERCENT: 3
