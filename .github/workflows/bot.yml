@@ -1,4 +1,4 @@
-name: Bitkub DOGE Scalper Bot
+name: Bitkub DOGE Scalper Bot..
 
 on:
   schedule:
@@ -16,11 +16,13 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
+        cache: 'npm' # ใช้ caching สำหรับ npm
     
     - name: Install dependencies
-      run: npm install
-      
+      run: |
+        npm install
+        npm ci --omit=dev # ใช้ npm ci สำหรับการติด dependencies ใน CI
+        
     - name: Run Bot
       env:
         BITKUB_API_KEY: ${{ secrets.BITKUB_API_KEY }}
