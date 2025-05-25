@@ -1,0 +1,27 @@
+name: Bitkub Trading Bot
+
+on:
+  schedule:
+    - cron: "*/30 * * * *" # ทำงานทุก 30 นาที
+  workflow_dispatch: # อนุญาตให้เรียกใช้งานด้วยมือ
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+    
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Run Bot
+      env:
+        BITKUB_API_KEY: ${{ secrets.BITKUB_API_KEY }}
+        BITKUB_API_SECRET: ${{ secrets.BITKUB_API_SECRET }}
+      run: node bot.js
