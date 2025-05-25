@@ -87,15 +87,19 @@ class BitkubAPI {
     const method = 'POST';
     const timestamp = Date.now().toString();
 
-    const bodyObj = {
-      sym: symbol.toLowerCase(),
-      amt: this.cleanNumber(amount),
-      rat: this.cleanNumber(price),
-      typ: 'limit',
-    };
 
-    const body = JSON.stringify(bodyObj);
-    const stringToSign = timestamp + method + path + body;
+    const bodyObj = {
+  sym: symbol.toLowerCase(),
+  amt: parseFloat(amount),
+  rat: parseFloat(price),
+  typ: 'limit',
+};
+
+// อย่าใช้ JSON.stringify
+const body = bodyObj;
+
+const stringToSign = timestamp + method + path + JSON.stringify(body);
+    
     const signature = this.signPayload(stringToSign);
 
     try {
@@ -128,15 +132,19 @@ class BitkubAPI {
     const method = 'POST';
     const timestamp = Date.now().toString();
 
-    const bodyObj = {
-      sym: symbol.toLowerCase(),
-      amt: this.cleanNumber(amount),
-      rat: this.cleanNumber(price),
-      typ: 'limit',
-    };
 
-    const body = JSON.stringify(bodyObj);
-    const stringToSign = timestamp + method + path + body;
+
+    const bodyObj = {
+  sym: symbol.toLowerCase(),
+  amt: parseFloat(amount),
+  rat: parseFloat(price),
+  typ: 'limit',
+};
+
+// อย่าใช้ JSON.stringify
+const body = bodyObj;
+
+const stringToSign = timestamp + method + path + JSON.stringify(body);
     const signature = this.signPayload(stringToSign);
 
     try {
