@@ -4,8 +4,8 @@ const CryptoJS = require('crypto-js');
 
 // ตั้งค่าจาก .env
 const {
-  BITKUB_API_KEY,
-  BITKUB_API_SECRET,
+  API_KEY,
+  API_SECRET,
   TRADE_SYMBOL,
   BUY_DIP_PERCENT,
   SELL_GAIN_PERCENT,
@@ -16,7 +16,7 @@ const BASE_URL = 'https://api.bitkub.com';
 
 // ฟังก์ชันสร้างลายเซ็น
 function generateSignature(payload) {
-  return CryptoJS.HmacSHA256(JSON.stringify(payload), BITKUB_API_SECRET).toString();
+  return CryptoJS.HmacSHA256(JSON.stringify(payload), API_SECRET).toString();
 }
 
 // ตรวจสอบยอดเงินใน wallet
@@ -30,7 +30,7 @@ async function checkWalletBalance() {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'X-BTK-APIKEY': BITKUB_API_KEY,
+        'X-BTK-APIKEY': API_KEY,
         'X-BTK-SIGN': signature
       }
     });
@@ -70,7 +70,7 @@ async function placeBuyOrder(price) {
 
     const response = await axios.post(`${BASE_URL}/api/market/place-bid`, payload, {
       headers: {
-        'X-BTK-APIKEY': BITKUB_API_KEY,
+        'X-BTK-APIKEY': API_KEY,
         'X-BTK-SIGN': signature
       }
     });
@@ -98,7 +98,7 @@ async function placeSellOrder(amount, price) {
 
     const response = await axios.post(`${BASE_URL}/api/market/place-ask`, payload, {
       headers: {
-        'X-BTK-APIKEY': BITKUB_API_KEY,
+        'X-BTK-APIKEY': API_KEY,
         'X-BTK-SIGN': signature
       }
     });
@@ -119,7 +119,7 @@ async function checkOpenOrders() {
 
     const response = await axios.post(`${BASE_URL}/api/market/my-open-orders`, payload, {
       headers: {
-        'X-BTK-APIKEY': BITKUB_API_KEY,
+        'X-BTK-APIKEY': API_KEY,
         'X-BTK-SIGN': signature
       }
     });
