@@ -1,21 +1,22 @@
-name: Bitkub Trading Bot
+name: Bitkub DOGE Scalper Bot
 
 on:
   schedule:
-    - cron: "*/30 * * * *" # ทำงานทุก 30 นาที
-  workflow_dispatch: # อนุญาตให้เรียกใช้งานด้วยมือ
+    - cron: '*/30 * * * *' # Run every 5 minutes
+  workflow_dispatch:
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     
     - name: Setup Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v4
       with:
-        node-version: '16'
+        node-version: '20'
+        cache: 'npm'
     
     - name: Install dependencies
       run: npm install
@@ -24,4 +25,8 @@ jobs:
       env:
         BITKUB_API_KEY: ${{ secrets.BITKUB_API_KEY }}
         BITKUB_API_SECRET: ${{ secrets.BITKUB_API_SECRET }}
-      run: node bot.js
+        TRADE_SYMBOL: THB_DOGE
+        BUY_DIP_PERCENT: 2
+        SELL_GAIN_PERCENT: 3
+        TRADE_AMOUNT: 50
+      run: npm start
