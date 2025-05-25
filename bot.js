@@ -21,16 +21,15 @@ async function getServerTime() {
     return response.data;
   } catch (error) {
     console.error('Error getting server time:', error.message);
-    return Date.now(); // Fallback to local time if API fails
+    return Date.now();
   }
 }
 
-// ฟังก์ชันสร้างลายเซ็นแบบใหม่ตามเอกสาร Bitkub
+// ฟังก์ชันสร้างลายเซ็นแบบใหม่
 async function generateSignature(httpMethod, endpoint, payload = {}) {
   const timestamp = await getServerTime();
   let message = `${timestamp}${httpMethod}${endpoint}`;
   
-  // สำหรับ POST request ต้องเพิ่ม payload ใน message
   if (httpMethod === 'POST') {
     message += JSON.stringify(payload);
   }
@@ -41,11 +40,11 @@ async function generateSignature(httpMethod, endpoint, payload = {}) {
   };
 }
 
-// ตรวจสอบยอดเงินใน wallet
+// ตรวจสอบยอดเงินใน wallet (แก้ไขแล้ว)
 async function checkWalletBalance() {
   try {
     const endpoint = '/api/v3/market/wallet';
-    const payload = {}; // Payload ว่างสำหรับ wallet endpoint
+    const payload = {};
     const { signature, timestamp } = await generateSignature('POST', endpoint, payload);
     
     const response = await axios.post(`${BASE_URL}${endpoint}`, payload, {
@@ -58,14 +57,18 @@ async function checkWalletBalance() {
       }
     });
 
-    return response.data;
+    // โครงสร้าง response ใหม่ของ Bitkub
+    return {
+      THB: response.data.THB?.available || 0,
+      DOGE: response.data.DOGE?.available || 0
+    };
   } catch (error) {
     console.error('Error checking wallet:', error.response?.data || error.message);
     throw error;
   }
 }
 
-// ตรวจสอบราคาปัจจุบัน (public API ไม่ต้องใช้ signature)
+// ตรวจสอบราคาปัจจุบัน
 async function getCurrentPrice(symbol) {
   try {
     const response = await axios.get(`${BASE_URL}/api/market/ticker?sym=${symbol}`);
@@ -76,14 +79,38 @@ async function getCurrentPrice(symbol) {
   }
 }
 
+// ตรวจสอบคำสั่งซื้อที่เปิดอยู่ (แก้ไขแล้ว)
+async function checkOpenOrders(symbol) {
+  try {
+    const endpoint = '/api/v3/market/my-open-orders';
+    const payload = { sym: symbol.toLowerCase() };
+    const { signature, timestamp } = await generateSignature('POST', endpoint, payload);
+    
+    const response = await axios.post(`${BASE_URL}${endpoint}`, payload, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-BTK-APIKEY': BITKUB_API_KEY,
+        'X-BTK-SIGN': signature,
+        'X-BTK-TIMESTAMP': timestamp.toString()
+      }
+    });
+
+    return response.data.result || [];
+  } catch (error) {
+    console.error('Error checking open orders:', error.response?.data || error.message);
+    return [];
+  }
+}
+
 // สั่งซื้อ
 async function placeBuyOrder(symbol, amount, price) {
   try {
     const endpoint = '/api/v3/market/place-bid';
     const payload = {
       sym: symbol.toLowerCase(),
-      amt: amount,
-      rat: price,
+      amt: parseFloat(amount),
+      rat: parseFloat(price),
       typ: 'limit'
     };
     
@@ -112,8 +139,8 @@ async function placeSellOrder(symbol, amount, price) {
     const endpoint = '/api/v3/market/place-ask';
     const payload = {
       sym: symbol.toLowerCase(),
-      amt: amount,
-      rat: price,
+      amt: parseFloat(amount),
+      rat: parseFloat(price),
       typ: 'limit'
     };
     
@@ -136,30 +163,6 @@ async function placeSellOrder(symbol, amount, price) {
   }
 }
 
-// ตรวจสอบคำสั่งซื้อที่เปิดอยู่
-async function checkOpenOrders(symbol) {
-  try {
-    const endpoint = '/api/v3/market/my-open-orders';
-    const payload = { sym: symbol };
-    const { signature, timestamp } = await generateSignature('POST', endpoint, payload);
-    
-    const response = await axios.post(`${BASE_URL}${endpoint}`, payload, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'X-BTK-APIKEY': BITKUB_API_KEY,
-        'X-BTK-SIGN': signature,
-        'X-BTK-TIMESTAMP': timestamp.toString()
-      }
-    });
-
-    return response.data;
-  } catch (error) {
-    console.error('Error checking open orders:', error.response?.data || error.message);
-    throw error;
-  }
-}
-
 // กลยุทธ์ Mini-Scalping
 async function executeStrategy() {
   try {
@@ -173,7 +176,10 @@ async function executeStrategy() {
 
     // ตรวจสอบยอดเงิน
     const wallet = await checkWalletBalance();
-    console.log('Wallet Balance:', wallet.THB, 'THB');
+    console.log('Wallet Balance:', {
+      THB: wallet.THB,
+      DOGE: wallet.DOGE
+    });
     
     if (wallet.THB < TRADE_AMOUNT) {
       console.log('Not enough THB balance for trading');
@@ -182,8 +188,8 @@ async function executeStrategy() {
 
     // ตรวจสอบคำสั่งซื้อที่เปิดอยู่
     const openOrders = await checkOpenOrders(TRADE_SYMBOL);
-    if (openOrders && openOrders.length > 0) {
-      console.log('There are pending orders, skipping...');
+    if (openOrders.length > 0) {
+      console.log('There are pending orders:', openOrders);
       return;
     }
 
@@ -192,21 +198,20 @@ async function executeStrategy() {
     console.log('Current Price:', currentPrice, 'THB');
 
     // ตรวจสอบว่ามี DOGE ในพอร์ตหรือไม่
-    const dogeBalance = wallet.DOGE || 0;
-    
-    if (dogeBalance > 0) {
+    if (wallet.DOGE > 0) {
       // ถ้ามี DOGE ให้ตรวจสอบเพื่อขาย
-      const sellPrice = (currentPrice * (1 + (SELL_GAIN_PERCENT/100))).toFixed(6);
-      console.log(`Attempting to sell DOGE at ${sellPrice} THB (${SELL_GAIN_PERCENT}% gain)`);
+      const sellPrice = (currentPrice * (1 + (SELL_GAIN_PERCENT/100)).toFixed(6);
+      console.log(`Attempting to sell ${wallet.DOGE} DOGE at ${sellPrice} THB (${SELL_GAIN_PERCENT}% gain)`);
       
-      const sellResult = await placeSellOrder(TRADE_SYMBOL, dogeBalance, sellPrice);
+      const sellResult = await placeSellOrder(TRADE_SYMBOL, wallet.DOGE, sellPrice);
       console.log('Sell Order Result:', sellResult);
     } else {
       // ถ้าไม่มี DOGE ให้ตรวจสอบเพื่อซื้อ
-      const buyPrice = (currentPrice * (1 - (BUY_DIP_PERCENT/100))).toFixed(6);
-      console.log(`Attempting to buy DOGE at ${buyPrice} THB (${BUY_DIP_PERCENT}% dip)`);
-      
+      const buyPrice = (currentPrice * (1 - (BUY_DIP_PERCENT/100)).toFixed(6);
       const buyAmount = (TRADE_AMOUNT / buyPrice).toFixed(2);
+      
+      console.log(`Attempting to buy ${buyAmount} DOGE at ${buyPrice} THB (${BUY_DIP_PERCENT}% dip)`);
+      
       const buyResult = await placeBuyOrder(TRADE_SYMBOL, buyAmount, buyPrice);
       console.log('Buy Order Result:', buyResult);
     }
@@ -215,41 +220,23 @@ async function executeStrategy() {
   }
 }
 
-
-
-async function verifyApiSetup() {
+// เรียกใช้งาน
+(async () => {
   try {
-    // ตรวจสอบ server time
+    // ตรวจสอบการเชื่อมต่อ API ก่อน
+    console.log('Verifying API connection...');
     const serverTime = await getServerTime();
     console.log('Server Time:', serverTime);
     
-    // ตรวจสอบ wallet
     const wallet = await checkWalletBalance();
-    console.log('Wallet Balance:', Object.keys(wallet).filter(k => wallet[k] > 0));
+    console.log('Initial Wallet Balance:', wallet);
     
-    // ตรวจสอบ ticker
-    const ticker = await getCurrentPrice(TRADE_SYMBOL);
-    console.log('Current Price:', ticker);
+    const price = await getCurrentPrice(TRADE_SYMBOL);
+    console.log('Current Price:', price);
     
-    return true;
+    // รันกลยุทธ์หลัก
+    await executeStrategy();
   } catch (error) {
-    console.error('API Verification Failed:', error.response?.data || error.message);
-    return false;
+    console.error('Initialization error:', error);
   }
-}
-
-
-(async () => {
-  console.log('Starting DOGE Mini-Scalping Bot...');
-  
-  // ตรวจสอบการตั้งค่า API ก่อน
-  const apiVerified = await verifyApiSetup();
-  if (!apiVerified) {
-    console.log('API Setup Verification Failed. Please check your configuration.');
-    return;
-  }
-  
-  // รันกลยุทธ์หลัก
-  await executeStrategy();
 })();
-
