@@ -40,25 +40,13 @@ async function getWallet() {
   return res.data.result;
 }
 
-// 📈 Get ticker price
-//async function getTicker(symbol) {
-//  const res = await axios.get(`${BASE_URL}/api/market/ticker?sym=${symbol}`);
-//  return res.data[symbol].last;
-//}
-
+ 📈 Get ticker price
 async function getTicker(symbol) {
-  const sym = symbol.toUpperCase();
-  const res = await axios.get(`${BASE_URL}/api/market/ticker?sym=${sym}`);
-  console.log("Ticker Response:", res.data);
-  return res.data[sym]?.last;
+  const res = await axios.get(`${BASE_URL}/api/market/ticker?sym=${symbol}`);
+  return res.data[symbol].last;
 }
 
 
-//async function getTicker(symbol) {
-//  const res = await axios.get(`${BASE_URL}/api/market/ticker?sym=${symbol}`);
-//  console.log("✅ Ticker Response:", res.data);
-//  return res.data[symbol]?.last;
-//}
 
 
 // 🛒 Place buy order
