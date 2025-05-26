@@ -129,7 +129,7 @@ async function runBot() {
 
 // Get balances
 const thbBalance = parseFloat(wallet["thb"]?.available || 0);
-const coinBalance = parseFloat(wallet[COIN.toLowerCase()]?.available || 0);
+const coinBalance = parseFloat(wallet[SYMBOL.toLowerCase()]?.available || 0);
 
 console.log(`💰 ยอด THB: ${thbBalance}, ยอดเหรียญ: ${coinBalance}`);
 
