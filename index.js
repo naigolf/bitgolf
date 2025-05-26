@@ -40,7 +40,7 @@ async function getWallet() {
   return res.data.result;
 }
 
- 📈 Get ticker price
+// 📈 Get ticker price
 async function getTicker(symbol) {
   const sym = symbol.toUpperCase();
   const res = await axios.get(`https://api.bitkub.com/api/v3/market/ticker?sym=${sym}`);
