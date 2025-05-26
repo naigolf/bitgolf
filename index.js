@@ -125,10 +125,14 @@ async function runBot() {
       console.log("❌ ไม่สามารถดึงข้อมูล Wallet ได้");
       return;
     }
-    const thbBalance = Number(wallet.thb) || 0;
-    const coinBalance = Number(wallet[SYMBOL.split("_")[0].toLowerCase()]) || 0; // เช่น doge
 
-    console.log(`💰 ยอด THB: ${thbBalance}, ยอดเหรียญ: ${coinBalance}`);
+
+// Get balances
+const thbBalance = parseFloat(wallet["thb"]?.available || 0);
+const coinBalance = parseFloat(wallet[COIN.toLowerCase()]?.available || 0);
+
+console.log(`💰 ยอด THB: ${thbBalance}, ยอดเหรียญ: ${coinBalance}`);
+
 
     // กำหนดราคาที่เราจะซื้อ-ขาย โดยเปรียบเทียบกับราคาล่าสุด
     // ซื้อเมื่อราคาลดลง 0.5-1% (สมมติเราจะตั้งซื้อที่ currentPrice * (1 - BUY_TRIGGER_PERCENT/100))
