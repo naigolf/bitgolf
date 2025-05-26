@@ -41,10 +41,18 @@ async function getWallet() {
 }
 
 // 📈 Get ticker price
+//async function getTicker(symbol) {
+//  const res = await axios.get(`${BASE_URL}/api/market/ticker?sym=${symbol}`);
+//  return res.data[symbol].last;
+//}
+
+
 async function getTicker(symbol) {
   const res = await axios.get(`${BASE_URL}/api/market/ticker?sym=${symbol}`);
-  return res.data[symbol].last;
+  console.log("✅ Ticker Response:", res.data);
+  return res.data[symbol]?.last;
 }
+
 
 // 🛒 Place buy order
 async function placeBid(symbol, amt, rat) {
