@@ -1,5 +1,5 @@
-import axios from "axios";
-import crypto from "crypto";
+const axios = require("axios");
+const crypto = require("crypto");
 
 // อ่านค่าจาก GitHub Secrets (ในสภาพแวดล้อมจริง ให้ตั้งเป็น ENV variables)
 const API_KEY = process.env.BITKUB_API_KEY;
