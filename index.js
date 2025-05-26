@@ -42,9 +42,12 @@ async function getWallet() {
 
  📈 Get ticker price
 async function getTicker(symbol) {
-  const res = await axios.get(`${BASE_URL}/api/market/ticker?sym=${symbol}`);
-  return res.data[symbol].last;
+  const sym = symbol.toUpperCase();
+  const res = await axios.get(`https://api.bitkub.com/api/v3/market/ticker?sym=${sym}`);
+  console.log("📈 Raw Ticker Response:", res.data); // ลองดูว่าเป็น object หรือ array
+  return res.data[sym]?.last;
 }
+
 
 
 
