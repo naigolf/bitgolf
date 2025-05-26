@@ -61,7 +61,7 @@ async function placeBid(symbol, amountTHB, rate) {
     sym: symbol,
     amt: amountTHB,
     rat: rate,
-    typ: "limit",
+    typ: "market",
   };
 
   const method = "POST";
@@ -89,7 +89,7 @@ async function placeAsk(symbol, amountCoin, rate) {
     sym: symbol,
     amt: amountCoin,
     rat: rate,
-    typ: "limit",
+    typ: "market",
   };
 
   const method = "POST";
