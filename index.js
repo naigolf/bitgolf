@@ -1,125 +1,165 @@
-const axios = require("axios");
-const crypto = require("crypto");
 
-// ✅ โหลดค่าจาก GitHub Secrets
+////////////////////////////////////////////////////////////////////////////////
+import axios from "axios";
+import crypto from "crypto";
+
+// อ่านค่าจาก GitHub Secrets (ในสภาพแวดล้อมจริง ให้ตั้งเป็น ENV variables)
 const API_KEY = process.env.BITKUB_API_KEY;
 const API_SECRET = process.env.BITKUB_API_SECRET;
-const SYMBOL = process.env.SYMBOL || "doge_thb";
-const BUY_PERCENT = parseFloat(process.env.BUY_PERCENT || "0.01"); // 1%
-const SELL_PERCENT = parseFloat(process.env.SELL_PERCENT || "0.012"); // 1.2%
-const BUY_AMOUNT = parseFloat(process.env.BUY_AMOUNT || "30"); // บาท
 
-const BASE_URL = "https://api.bitkub.com";
+// ตั้งค่า parameter bot
+const SYMBOL = process.env.SYMBOL || "DOGE_THB";  // เหรียญที่เทรด
+const BUY_AMOUNT_THB = Number(process.env.BUY_AMOUNT) || 30; // 30 บาทต่อไม้
+const BUY_TRIGGER_PERCENT = Number(process.env.BUY_PERCENT) || 0.7;  // ซื้อเมื่อราคาลดลง 0.5–1% (ใช้ 0.7% เป็นตัวอย่าง)
+const SELL_TRIGGER_PERCENT = Number(process.env.SELL_PERCENT) || 1.0; // ขายเมื่อราคาขึ้น 0.7–1.2% (ใช้ 1% เป็นตัวอย่าง)
 
-// ⏱️ GET server time
+const host = "https://api.bitkub.com";
+
+function genSign(apiSecret, payloadString) {
+  return crypto.createHmac("sha256", apiSecret).update(payloadString).digest("hex");
+}
+
 async function getServerTime() {
-  const res = await axios.get(`${BASE_URL}/api/v3/servertime`);
-  return res.data;
+  const path = "/api/v3/servertime";
+  const res = await axios.get(host + path);
+  return res.data; // ค่าตัวเลข timestamp
 }
 
-// 🔏 Signature generator
-function sign(ts, method, path, bodyOrQuery = "") {
-  const text = `${ts}${method}${path}${bodyOrQuery}`;
-  return crypto.createHmac("sha256", API_SECRET).update(text).digest("hex");
-}
-
-// 📦 Get wallet balance
-async function getWallet() {
-  const ts = await getServerTime();
-  const path = "/api/v3/market/wallet";
-  const sig = sign(ts, "POST", path, "{}");
-
-  const headers = {
-    "X-BTK-APIKEY": API_KEY,
-    "X-BTK-TIMESTAMP": ts,
-    "X-BTK-SIGN": sig,
-    "Content-Type": "application/json",
-  };
-
-  const res = await axios.post(BASE_URL + path, {}, { headers });
-  return res.data.result;
-}
-
-// 📈 Get ticker price
+// ฟังก์ชัน getTicker ดึงราคาล่าสุด (ไม่ต้องใช้ signature)
 async function getTicker(symbol) {
-  const sym = symbol.toUpperCase();
-  const res = await axios.get(`https://api.bitkub.com/api/v3/market/ticker?sym=${sym}`);
-  console.log("📈 Raw Ticker Response:", res.data); // ลองดูว่าเป็น object หรือ array
-  return res.data[sym]?.last;
+  const res = await axios.get(`${host}/api/v3/market/ticker?sym=${symbol}`);
+  const tickerData = res.data[0];
+  return tickerData?.last ? Number(tickerData.last) : null;
 }
 
-
-
-
-
-// 🛒 Place buy order
-async function placeBid(symbol, amt, rat) {
+// ฟังก์ชัน getWallet เช็คยอดเงินบาทและเหรียญ
+async function getWallet() {
+  const path = "/api/v3/market/wallet";
   const ts = await getServerTime();
+
+  const method = "POST";
+  const payloadString = ts + method + path + "{}";
+
+  const signature = genSign(API_SECRET, payloadString);
+
+  const headers = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "X-BTK-TIMESTAMP": ts,
+    "X-BTK-SIGN": signature,
+    "X-BTK-APIKEY": API_KEY,
+  };
+
+  const res = await axios.post(host + path, {}, { headers });
+  return res.data.result; // object เช่น { thb: 12345, doge: 10.123, ... }
+}
+
+// ฟังก์ชัน สั่งซื้อ (POST /api/v3/market/place-bid)
+async function placeBid(symbol, amountTHB, rate) {
   const path = "/api/v3/market/place-bid";
-  const body = { sym: symbol, amt, rat, typ: "limit" };
-  const sig = sign(ts, "POST", path, JSON.stringify(body));
-
-  const headers = {
-    "X-BTK-APIKEY": API_KEY,
-    "X-BTK-TIMESTAMP": ts,
-    "X-BTK-SIGN": sig,
-    "Content-Type": "application/json",
-  };
-
-  const res = await axios.post(BASE_URL + path, body, { headers });
-  return res.data;
-}
-
-// 🛒 Place sell order
-async function placeAsk(symbol, amt, rat) {
   const ts = await getServerTime();
-  const path = "/api/v3/market/place-ask";
-  const body = { sym: symbol, amt, rat, typ: "limit" };
-  const sig = sign(ts, "POST", path, JSON.stringify(body));
 
-  const headers = {
-    "X-BTK-APIKEY": API_KEY,
-    "X-BTK-TIMESTAMP": ts,
-    "X-BTK-SIGN": sig,
-    "Content-Type": "application/json",
+  const body = {
+    sym: symbol,
+    amt: amountTHB,
+    rat: rate,
+    typ: "limit",
   };
 
-  const res = await axios.post(BASE_URL + path, body, { headers });
+  const method = "POST";
+  const payloadString = ts + method + path + JSON.stringify(body);
+  const signature = genSign(API_SECRET, payloadString);
+
+  const headers = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "X-BTK-TIMESTAMP": ts,
+    "X-BTK-SIGN": signature,
+    "X-BTK-APIKEY": API_KEY,
+  };
+
+  const res = await axios.post(host + path, body, { headers });
   return res.data;
 }
 
-// 🚀 Main logic
+// ฟังก์ชัน สั่งขาย (POST /api/v3/market/place-ask)
+async function placeAsk(symbol, amountCoin, rate) {
+  const path = "/api/v3/market/place-ask";
+  const ts = await getServerTime();
+
+  const body = {
+    sym: symbol,
+    amt: amountCoin,
+    rat: rate,
+    typ: "limit",
+  };
+
+  const method = "POST";
+  const payloadString = ts + method + path + JSON.stringify(body);
+  const signature = genSign(API_SECRET, payloadString);
+
+  const headers = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "X-BTK-TIMESTAMP": ts,
+    "X-BTK-SIGN": signature,
+    "X-BTK-APIKEY": API_KEY,
+  };
+
+  const res = await axios.post(host + path, body, { headers });
+  return res.data;
+}
+
+// ฟังก์ชันหลัก: รัน logic Mini-Scalping
 async function runBot() {
   try {
+    // ดึงราคาล่าสุด
+    const currentPrice = await getTicker(SYMBOL);
+    if (!currentPrice) {
+      console.log("❌ ไม่สามารถดึงราคาล่าสุดได้");
+      return;
+    }
+    console.log(`📈 ราคาล่าสุดของ ${SYMBOL}: ${currentPrice}`);
+
+    // เช็คยอด wallet
     const wallet = await getWallet();
-    const price = await getTicker(SYMBOL);
-    const [coin, currency] = SYMBOL.toUpperCase().split("_");
+    if (!wallet) {
+      console.log("❌ ไม่สามารถดึงข้อมูล Wallet ได้");
+      return;
+    }
+    const thbBalance = Number(wallet.thb) || 0;
+    const coinBalance = Number(wallet[SYMBOL.split("_")[0].toLowerCase()]) || 0; // เช่น doge
 
-    const thb = wallet["THB"].available;
-    const coinAmt = wallet[coin]?.available || 0;
+    console.log(`💰 ยอด THB: ${thbBalance}, ยอดเหรียญ: ${coinBalance}`);
 
-    console.log(`💰 THB: ${thb}, ${coin}: ${coinAmt}, Price: ${price}`);
+    // กำหนดราคาที่เราจะซื้อ-ขาย โดยเปรียบเทียบกับราคาล่าสุด
+    // ซื้อเมื่อราคาลดลง 0.5-1% (สมมติเราจะตั้งซื้อที่ currentPrice * (1 - BUY_TRIGGER_PERCENT/100))
+    const buyPrice = +(currentPrice * (1 - BUY_TRIGGER_PERCENT / 100)).toFixed(6);
 
-    // ✅ BUY
-    if (thb >= BUY_AMOUNT) {
-      const targetBuyPrice = price * (1 - BUY_PERCENT);
-      const coinToBuy = +(BUY_AMOUNT / targetBuyPrice).toFixed(3);
+    // ขายเมื่อราคาขึ้น 0.7-1.2% (สมมติเราจะตั้งขายที่ currentPrice * (1 + SELL_TRIGGER_PERCENT/100))
+    const sellPrice = +(currentPrice * (1 + SELL_TRIGGER_PERCENT / 100)).toFixed(6);
 
-      console.log(`🟢 Buying ${coinToBuy} ${coin} at ${targetBuyPrice}`);
-      const res = await placeBid(SYMBOL, coinToBuy, Math.floor(targetBuyPrice));
-      console.log("✅ Buy order:", res);
+    // เช็คว่ามีเงินพอจะซื้อหรือไม่
+    if (thbBalance >= BUY_AMOUNT_THB) {
+      console.log(`⚡️ สั่งซื้อ: จำนวนเงิน ${BUY_AMOUNT_THB} THB ที่ราคา ${buyPrice}`);
+      const buyRes = await placeBid(SYMBOL, BUY_AMOUNT_THB, buyPrice);
+      console.log("📦 ผลลัพธ์การสั่งซื้อ:", buyRes);
+    } else {
+      console.log("❌ เงิน THB ไม่พอสำหรับการซื้อ");
     }
 
-    // ✅ SELL
-    if (coinAmt > 0.5) {
-      const targetSellPrice = price * (1 + SELL_PERCENT);
-      console.log(`🔴 Selling ${coinAmt} ${coin} at ${targetSellPrice}`);
-      const res = await placeAsk(SYMBOL, +coinAmt.toFixed(3), Math.floor(targetSellPrice));
-      console.log("✅ Sell order:", res);
+    // เช็คว่ามีเหรียญพอขายหรือไม่ (สมมติขายทั้งหมดที่มี)
+    if (coinBalance > 0) {
+      console.log(`⚡️ สั่งขาย: จำนวนเหรียญ ${coinBalance} ที่ราคา ${sellPrice}`);
+      const sellRes = await placeAsk(SYMBOL, coinBalance, sellPrice);
+      console.log("📦 ผลลัพธ์การสั่งขาย:", sellRes);
+    } else {
+      console.log("❌ ไม่มีเหรียญสำหรับขาย");
     }
-  } catch (err) {
-    console.error("❌ Error:", err.response?.data || err.message);
+  } catch (error) {
+    console.error("❌ Error:", error.response?.data || error.message);
   }
 }
 
+// เรียกใช้งาน bot
 runBot();
