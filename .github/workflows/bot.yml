@@ -1,31 +1,24 @@
-name: Bitkub Trading Bot
+name: Auto Trade Every 30 Min
 
 on:
-  # schedule:
-  #  - cron: '*/30 * * * *' # Run every 5 minutes
-  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: # 👈 กดรันด้วยมือ
 
 jobs:
-  run-bot:
+  trade:
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    
-    - name: Install dependencies
-      run: npm install
-      
-    - name: Run Bot
-      env:
-        BITKUB_API_KEY: ${{ secrets.BITKUB_API_KEY }}
-        BITKUB_API_SECRET: ${{ secrets.BITKUB_API_SECRET }}
-        TRADE_SYMBOL: THB_DOGE
-        BUY_DIP_PERCENT: 2
-        SELL_GAIN_PERCENT: 3
-        TRADE_AMOUNT: 50
-      run: npm start
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm install axios
+      - run: node index.js
+        env:
+          BITKUB_API_KEY: ${{ secrets.BITKUB_API_KEY }}
+          BITKUB_API_SECRET: ${{ secrets.BITKUB_API_SECRET }}
+          SYMBOL: ${{ secrets.SYMBOL }}
+          BUY_AMOUNT: ${{ secrets.BUY_AMOUNT }}
+          BUY_PERCENT: ${{ secrets.BUY_PERCENT }}
+          SELL_PERCENT: ${{ secrets.SELL_PERCENT }}
