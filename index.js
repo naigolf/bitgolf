@@ -146,22 +146,42 @@ console.log(`💰 ยอด THB: ${thbBalance}, ยอดเหรียญ ${co
     const sellPrice = +(currentPrice * (1 + SELL_TRIGGER_PERCENT / 100)).toFixed(6);
 
     // เช็คว่ามีเงินพอจะซื้อหรือไม่
-    if (thbBalance >= BUY_AMOUNT_THB) {
-      console.log(`⚡️ สั่งซื้อ: จำนวนเงิน ${BUY_AMOUNT_THB} THB ที่ราคา ${buyPrice}`);
-      const buyRes = await placeBid(SYMBOL, BUY_AMOUNT_THB, buyPrice);
-      console.log("📦 ผลลัพธ์การสั่งซื้อ:", buyRes);
-    } else {
-      console.log("❌ เงิน THB ไม่พอสำหรับการซื้อ");
-    }
+//    if (thbBalance >= BUY_AMOUNT_THB) {
+//      console.log(`⚡️ สั่งซื้อ: จำนวนเงิน ${BUY_AMOUNT_THB} THB ที่ราคา ${buyPrice}`);
+//      const buyRes = await placeBid(SYMBOL, BUY_AMOUNT_THB, buyPrice);
+//      console.log("📦 ผลลัพธ์การสั่งซื้อ:", buyRes);
+//    } else {
+//      console.log("❌ เงิน THB ไม่พอสำหรับการซื้อ");
+//    }
+
+if (currentPrice <= buyPrice && thbBalance >= BUY_AMOUNT_THB) {
+  console.log(`⚡️ สั่งซื้อ: ${BUY_AMOUNT_THB} THB ที่ราคา <= ${buyPrice}`);
+  const buyRes = await placeBid(SYMBOL, BUY_AMOUNT_THB, currentPrice);
+  console.log("📦 ผลลัพธ์การสั่งซื้อ:", buyRes);
+} else {
+  console.log("⏳ ยังไม่ถึงเงื่อนไขซื้อ (รอลงอีก)");
+}
+
 
     // เช็คว่ามีเหรียญพอขายหรือไม่ (สมมติขายทั้งหมดที่มี)
-    if (coinBalance > 0) {
-      console.log(`⚡️ สั่งขาย: จำนวนเหรียญ ${coinBalance} ที่ราคา ${sellPrice}`);
-      const sellRes = await placeAsk(SYMBOL, coinBalance, sellPrice);
-      console.log("📦 ผลลัพธ์การสั่งขาย:", sellRes);
-    } else {
-      console.log("❌ ไม่มีเหรียญสำหรับขาย");
-    }
+//    if (coinBalance > 0) {
+//      console.log(`⚡️ สั่งขาย: จำนวนเหรียญ ${coinBalance} ที่ราคา ${sellPrice}`);
+//      const sellRes = await placeAsk(SYMBOL, coinBalance, sellPrice);
+//      console.log("📦 ผลลัพธ์การสั่งขาย:", sellRes);
+//    } else {
+//      console.log("❌ ไม่มีเหรียญสำหรับขาย");
+//    }
+
+if (currentPrice >= sellPrice && coinBalance > 0) {
+  console.log(`⚡️ สั่งขาย: ${coinBalance} เหรียญ ที่ราคา >= ${sellPrice}`);
+  const sellRes = await placeAsk(SYMBOL, coinBalance, currentPrice);
+  console.log("📦 ผลลัพธ์การสั่งขาย:", sellRes);
+} else {
+  console.log("⏳ ยังไม่ถึงเงื่อนไขขาย (รอราคาขึ้น)");
+}
+
+
+
   } catch (error) {
     console.error("❌ Error:", error.response?.data || error.message);
   }
