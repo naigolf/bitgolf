@@ -121,6 +121,7 @@ async function runBot() {
 
     // เช็คยอด wallet
     const wallet = await getWallet();
+    console.log("Wallet data:", wallet);
     if (!wallet) {
       console.log("❌ ไม่สามารถดึงข้อมูล Wallet ได้");
       return;
@@ -130,13 +131,12 @@ async function runBot() {
 // Get balances
 
 const coin = SYMBOL.split("_")[0]; // ดึง DOGE จาก DOGE_THB
-const thbBalance = parseFloat(wallet["thb"] || 0); // ใช้ตัวพิมพ์เล็ก
+const thbBalance = parseFloat(wallet["THB"] || 0); // ใช้ตัวพิมพ์เล็ก
 const coinBalance = parseFloat(wallet[coin.toLowerCase()] || 0); // เช่น doge
 
+    
 
 console.log(`💰 ยอด THB: ${thbBalance}, ยอดเหรียญ ${coin}: ${coinBalance}`);
-
-
 
     // กำหนดราคาที่เราจะซื้อ-ขาย โดยเปรียบเทียบกับราคาล่าสุด
     // ซื้อเมื่อราคาลดลง 0.5-1% (สมมติเราจะตั้งซื้อที่ currentPrice * (1 - BUY_TRIGGER_PERCENT/100))
