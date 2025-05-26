@@ -128,10 +128,12 @@ async function runBot() {
 
 
 // Get balances
-const thbBalance = parseFloat(wallet["thb"]?.available || 0);
-const coinBalance = parseFloat(wallet[SYMBOL.toLowerCase()]?.available || 0);
+const coin = SYMBOL.split("_")[0]; // ดึง DOGE จาก DOGE_THB
+const thbBalance = parseFloat(wallet["THB"]?.available || 0);
+const coinBalance = parseFloat(wallet[SYMBOL]?.available || 0);
 
-console.log(`💰 ยอด THB: ${thbBalance}, ยอดเหรียญ: ${coinBalance}`);
+console.log(`💰 ยอด THB: ${thbBalance}, ยอดเหรียญ ${coin}: ${coinBalance}`);
+
 
 
     // กำหนดราคาที่เราจะซื้อ-ขาย โดยเปรียบเทียบกับราคาล่าสุด
