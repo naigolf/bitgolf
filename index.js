@@ -128,9 +128,11 @@ async function runBot() {
 
 
 // Get balances
+
 const coin = SYMBOL.split("_")[0]; // ดึง DOGE จาก DOGE_THB
-const thbBalance = parseFloat(wallet["THB"]?.available || 0);
-const coinBalance = parseFloat(wallet[SYMBOL]?.available || 0);
+const thbBalance = parseFloat(wallet["thb"] || 0); // ใช้ตัวพิมพ์เล็ก
+const coinBalance = parseFloat(wallet[coin.toLowerCase()] || 0); // เช่น doge
+
 
 console.log(`💰 ยอด THB: ${thbBalance}, ยอดเหรียญ ${coin}: ${coinBalance}`);
 
