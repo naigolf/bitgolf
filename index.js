@@ -113,7 +113,7 @@ async function placeAsk(symbol, amountCoin, rate) {
 
 
 
-// ฟังก์ชันทดสอบขายเหรียญ DOGE แบบกดรันด้วยมือ (4 DOGE)
+// ทดสอบขายเหรียญ DOGE แบบกดรันด้วยมือ (4 DOGE)
 async function manualSellTest() {
   try {
     const symbol = "DOGE_THB";
@@ -147,6 +147,15 @@ async function manualSellTest() {
   } catch (error) {
     console.error("❌ Error (manual test):", error.response?.data || error.message);
   }
+}
+
+// เลือกโหมดการทำงานจาก argument ที่ส่งเข้ามา
+const mode = process.argv[2];
+
+if (mode === "selltest") {
+  manualSellTest();
+} else {
+  runBot();
 }
 
 
