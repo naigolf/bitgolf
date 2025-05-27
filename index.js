@@ -113,59 +113,6 @@ async function placeAsk(symbol, amountCoin, rate) {
 
 
 
-// ทดสอบขายเหรียญ DOGE แบบกดรันด้วยมือ (4 DOGE)
-async function manualSellTest() {
-  try {
-    const symbol = "DOGE_THB";
-    const amountCoin = 4; // จำนวนเหรียญที่ต้องการขาย
-
-    // ดึงราคาล่าสุด
-    const currentPrice = await getTicker(symbol);
-    if (!currentPrice) {
-      console.log("❌ ไม่สามารถดึงราคาล่าสุดได้");
-      return;
-    }
-    console.log(`📈 ราคาปัจจุบันของ ${symbol}: ${currentPrice}`);
-
-    // เช็คยอด wallet
-    const wallet = await getWallet();
-    if (!wallet) {
-      console.log("❌ ไม่สามารถดึงข้อมูล Wallet ได้");
-      return;
-    }
-
-    const coinBalance = parseFloat(wallet["DOGE"] || 0);
-    console.log(`💰 คุณมี DOGE: ${coinBalance} เหรียญ`);
-
-    if (coinBalance >= amountCoin) {
-      console.log(`⚡️ เริ่มทดสอบขาย ${amountCoin} DOGE ที่ราคา ${currentPrice}`);
-      const sellRes = await placeAsk(symbol, amountCoin, currentPrice);
-      console.log("📦 ผลลัพธ์การสั่งขาย (ทดสอบ):", sellRes);
-    } else {
-      console.log(`❌ ยอด DOGE ไม่พอ (${coinBalance} < ${amountCoin})`);
-    }
-  } catch (error) {
-    console.error("❌ Error (manual test):", error.response?.data || error.message);
-  }
-}
-
-// เลือกโหมดการทำงานจาก argument ที่ส่งเข้ามา
-const mode = process.argv[2];
-
-if (mode === "selltest") {
-  manualSellTest();
-} else {
-  runBot();
-}
-
-
-
-
-
-
-
-
-
 
 
 // ฟังก์ชันหลัก: รัน logic Mini-Scalping
